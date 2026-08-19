@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+cdk.out/
+.DS_Store
+Thumbs.db
+
+.claude/settings.local.json
