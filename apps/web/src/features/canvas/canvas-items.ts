@@ -1,5 +1,5 @@
-import type { Timeline } from '@timeline/shared';
-import type { TimelineContent } from '../../lib/mock/content-store';
+import type { EntityColor, Timeline } from '@timeline/shared';
+import type { TimelineContent } from '../../lib/timeline-content-api';
 import { formatPartialDate } from '../../lib/format-date';
 import { partialDateToDayNumber } from './domain/day-number';
 
@@ -11,6 +11,7 @@ export interface CanvasMilestone {
   title: string;
   dateLabel: string;
   isHighlighted: boolean;
+  color: EntityColor | undefined;
 }
 
 export interface CanvasStage {
@@ -20,6 +21,7 @@ export interface CanvasStage {
   endDay: number;
   ongoing: boolean;
   isHighlighted: boolean;
+  color: EntityColor | undefined;
   rangeLabel: string;
 }
 
@@ -49,6 +51,7 @@ export function buildCanvasItems(
           title: milestone.title,
           dateLabel: formatPartialDate(milestone.date, locale),
           isHighlighted: ref.isHighlighted,
+          color: ref.color,
         },
       ];
     })
@@ -75,6 +78,7 @@ export function buildCanvasItems(
         endDay: Math.max(startDay, rawEnd),
         ongoing: stage.ongoing,
         isHighlighted: ref.isHighlighted,
+        color: ref.color,
         rangeLabel: `${formatPartialDate(stage.start, locale)} → ${endLabel}`,
       },
     ];

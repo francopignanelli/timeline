@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Timeline } from '@timeline/shared';
-import type { TimelineContent } from '../../lib/mock/content-store';
+import type { TimelineContent } from '../../lib/timeline-content-api';
 import { useElementSize } from '../../hooks/useElementSize';
 import { measureTextWidth } from '../../lib/measure-text';
 import { buildCanvasItems } from './canvas-items';
@@ -15,12 +15,15 @@ import { fitRange, panByPx, visibleRange, zoomAt } from './domain/time-scale';
 import { TimeAxisLayer } from './TimeAxisLayer';
 import { StageLayer } from './StageLayer';
 import { MilestoneLayer } from './MilestoneLayer';
+import { AddMilestoneDialog } from './AddMilestoneDialog';
+import { AddStageDialog } from './AddStageDialog';
 
 interface TimelineCanvasProps {
   timeline: Timeline;
   content: TimelineContent;
   selectedMilestoneId: string | null;
   onOpenMilestone: (milestoneId: string) => void;
+  onOpenStage: (stageId: string) => void;
 }
 
 const KEY_PAN_PX = 120;
@@ -40,6 +43,7 @@ export function TimelineCanvas({
   content,
   selectedMilestoneId,
   onOpenMilestone,
+  onOpenStage,
 }: TimelineCanvasProps) {
   const { t, i18n } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,6 +51,8 @@ export function TimelineCanvas({
   const [scale, setScale] = useState<TimeScale | null>(null);
   const [rulerVisible, setRulerVisible] = useState(timeline.rulerVisible);
   const [dragging, setDragging] = useState(false);
+  const [addMilestoneOpen, setAddMilestoneOpen] = useState(false);
+  const [addStageOpen, setAddStageOpen] = useState(false);
   const dragState = useRef<{ pointerId: number; lastX: number } | null>(null);
 
   const today = useMemo(() => todayDayNumber(), []);
@@ -128,7 +134,7 @@ export function TimelineCanvas({
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    if ((e.target as Element).closest('button')) return;
+    if ((e.target as Element).closest('button, [role="button"]')) return;
     containerRef.current?.setPointerCapture(e.pointerId);
     dragState.current = { pointerId: e.pointerId, lastX: e.clientX };
     setDragging(true);
@@ -197,7 +203,13 @@ export function TimelineCanvas({
       {scale && (
         <>
           <svg width={width} height={height} className="absolute inset-0">
-            <StageLayer scale={scale} stages={visibleStages} lanes={lanes} axisY={axisY} />
+            <StageLayer
+              scale={scale}
+              stages={visibleStages}
+              lanes={lanes}
+              axisY={axisY}
+              onOpen={onOpenStage}
+            />
             <TimeAxisLayer
               scale={scale}
               width={width}
@@ -228,6 +240,12 @@ export function TimelineCanvas({
       )}
 
       <div className="absolute right-4 top-4 flex gap-2">
+        <CanvasButton label={t('canvas.addMilestone.title')} onClick={() => setAddMilestoneOpen(true)}>
+          {t('canvas.addMilestone.short')}
+        </CanvasButton>
+        <CanvasButton label={t('canvas.addStage.title')} onClick={() => setAddStageOpen(true)}>
+          {t('canvas.addStage.short')}
+        </CanvasButton>
         <CanvasButton
           label={t('canvas.zoomOut')}
           onClick={() => scale && setScale(zoomAt(scale, width / 2, 1 / BUTTON_ZOOM_FACTOR))}
@@ -251,6 +269,17 @@ export function TimelineCanvas({
           {t('canvas.ruler')}
         </CanvasButton>
       </div>
+
+      <AddMilestoneDialog
+        timelineId={timeline.id}
+        open={addMilestoneOpen}
+        onClose={() => setAddMilestoneOpen(false)}
+      />
+      <AddStageDialog
+        timelineId={timeline.id}
+        open={addStageOpen}
+        onClose={() => setAddStageOpen(false)}
+      />
     </div>
   );
 }

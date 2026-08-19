@@ -38,6 +38,23 @@
     --motion-fast: 120ms;
     --motion-base: 200ms;
     --motion-slow: 300ms;
+
+    /*
+     * Entity palette — the only colors a Milestone/Stage may be tinted with.
+     * Muted, ink-like hues chosen to sit calmly on the warm paper background
+     * and stay legible against it (see DESIGN_SYSTEM.md).
+     *
+     * Declared here rather than in `@theme` on purpose: Tailwind v4 drops
+     * theme variables no utility class references, and these are only ever
+     * read through a `var()` string built at runtime from stored data
+     * (EntityColor → token name), which the class scanner cannot see.
+     */
+    --color-entity-amber: #b26a12;
+    --color-entity-rose: #b03a5b;
+    --color-entity-violet: #6b4bb8;
+    --color-entity-teal: #10736b;
+    --color-entity-green: #3f7238;
+    --color-entity-slate: #4d5a68;
   }
 
   @media (prefers-reduced-motion: reduce) {

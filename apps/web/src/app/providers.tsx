@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
-import { AuthProvider } from '../features/auth/mock-auth';
+import { AuthProvider } from '../features/auth/auth-provider';
 import { router } from './router';
 
 // Bounded retries also act as a cost safeguard once the real API exists.

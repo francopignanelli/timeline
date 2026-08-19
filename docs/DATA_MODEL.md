@@ -23,20 +23,24 @@ interface PartialDate {
 - **Timeline**: id, ownerId, title, description?, start: PartialDate, end?: PartialDate, ongoing: boolean, unit (`DAYS|MONTHS|QUARTERS|YEARS`), rulerVisible: boolean, visibility (`PRIVATE|SHARED|UNLISTED|PUBLIC`, MVP enforces PRIVATE), createdAt, updatedAt.
 - **Milestone**: id, ownerId, title, date: PartialDate, blocks: ContentBlock[], createdAt, updatedAt.
 - **Stage**: id, ownerId, title, description?, start: PartialDate, end?: PartialDate, ongoing: boolean, createdAt, updatedAt.
-- **TimelineMilestone** (link): timelineId, milestoneId, displayOrder, isHighlighted, isHidden, addedAt.
-- **TimelineStage** (link): timelineId, stageId, displayStyle?, isHighlighted, addedAt. (`lane` is computed at render time — see DECISIONS #10.)
+- **TimelineMilestone** (link): timelineId, milestoneId, displayOrder, isHighlighted, isHidden, color?, addedAt.
+- **TimelineStage** (link): timelineId, stageId, displayStyle?, isHighlighted, color?, addedAt. (`lane` is computed at render time — see DECISIONS #10.)
+
+`color` is an `EntityColor` palette **name** (`DEFAULT | AMBER | ROSE | VIOLET | TEAL | GREEN | SLATE`), never a raw hex value — stored data may only reference a design token (DECISIONS #31). It lives on the link, not the shared entity, because color is presentation: the same Milestone may read differently in two timelines.
 
 ```ts
-interface ContentBlock {
-  id: string;
-  type: 'TEXT';           // future: IMAGE | VIDEO | AUDIO | RECORDED_AUDIO | FILE | LINK
-  order: number;
-  text?: string;          // for TEXT
-  // future types add their own optional fields (s3Key, url, metadata, ...)
-}
+type ContentBlock = TextBlock | YouTubeBlock | ImageBlock | FileBlock;
+
+interface TextBlock    { id; order; type: 'TEXT';    text: string }
+interface YouTubeBlock { id; order; type: 'YOUTUBE'; youtubeId: string; caption?: string }
+interface ImageBlock   { id; order; type: 'IMAGE';   s3Key; fileName; contentType: ImageMimeType; size; caption? }
+interface FileBlock    { id; order; type: 'FILE';    s3Key; fileName; contentType: FileMimeType;  size }
+// future: AUDIO | RECORDED_AUDIO | LINK join the union
 ```
 
-MVP stores `blocks` embedded in the Milestone item (text-only content is far below the 400 KB item limit). When media blocks arrive, blocks migrate to separate items under the milestone partition (`MILESTONE#<id> / BLOCK#<order>`); the API contract does not change.
+Blocks stay embedded in the Milestone item: media blocks store only an **object key**, never bytes, so items remain far below the 400 KB limit even with many attachments. (The pre-committed migration to `MILESTONE#<id> / BLOCK#<order>` items is therefore still unnecessary — revisit only if a milestone ever approaches the item-size limit.)
+
+`YouTubeBlock` stores the bare 11-char video id, never a pasted URL; the embed src is rebuilt from it at render time. `ImageBlock`/`FileBlock` store only the S3 key; every view mints a short-lived presigned URL (see SECURITY.md).
 
 IDs are **ULIDs** — lexicographically sortable by creation time, which makes them usable directly in sort keys.
 

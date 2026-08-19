@@ -27,7 +27,10 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
         if (e.target === ref.current) onClose(); // click on the backdrop
       }}
       aria-label={title}
-      className="m-auto w-full max-w-lg rounded-xl border border-border bg-surface-elevated p-6 text-text backdrop:bg-dark/40"
+      // Desktop: centered card that scrolls internally rather than growing past
+      // the viewport (milestone editors can carry several blocks). Mobile:
+      // full-screen sheet, per UI_SPEC.md.
+      className="m-auto max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface-elevated p-6 text-text backdrop:bg-dark/40 max-sm:h-full max-sm:max-h-full max-sm:max-w-full max-sm:rounded-none max-sm:border-0"
     >
       {open && (
         <>

@@ -1,0 +1,12 @@
+[build]
+  # Root install resolves the npm workspace links (packages/shared has no
+  # build step — apps/web imports its TS source directly).
+  command = "npm install && npm run build --workspace @timeline/web"
+  publish = "apps/web/dist"
+
+# React Router uses browser (path-based) routing — every path must fall
+# through to index.html so client-side routing can take over.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

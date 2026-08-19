@@ -50,6 +50,15 @@
 - Structured JSON logs: requestId, route, userId (sub), outcome, latency. Never tokens, passwords, or full request bodies.
 - CloudWatch retention 7 days (dev). Errors log stack traces server-side only; clients get opaque 500s.
 
-## S3 (deferred, rules pre-committed)
+## S3 uploads (live as of Phase 7 — the pre-committed rules, now implemented)
 
-Private buckets only; presigned upload/download URLs; server-side MIME + size validation before presigning; per-type size caps; no public bucket policies — to be detailed when the uploads phase is planned.
+- **Private bucket**, `BlockPublicAccess.BLOCK_ALL`, SSE-S3 encryption, `enforceSSL`. Verified: anonymous GET returns 403. There is no unsigned path to an object.
+- **Presigned URLs only.** Upload URLs live 5 minutes, view URLs 15. The upload signature pins `Content-Type` and `Content-Length`, so a client cannot upload something other than what the server validated.
+- **Server-side MIME allowlist + size caps enforced before signing** — images ≤5 MB, files ≤10 MB. `image/svg+xml` is deliberately excluded: SVG is an executable document and these objects are served from a domain we presign for. Executables are not on any list.
+- **Ownership from the key.** Keys are minted `u/<userId>/<ulid><ext>`; a view/download request for a key outside the caller's own prefix returns 404 (no existence leak). Key shape is schema-validated, so `../` traversal is rejected at the boundary.
+- **FILE downloads force `Content-Disposition: attachment`**, so a document can never render inline as an active document in the browser.
+- Known gap (documented, not fixed): objects are not garbage-collected when a milestone or block is deleted, and an upload abandoned before save is orphaned. Bounded and trivial at current caps/usage; a sweeper is the answer if it ever matters.
+
+## Embedded third-party content
+
+YouTube blocks store only a validated 11-character video id — never a pasted URL. The embed `src` is **rebuilt** from that id at render time against `youtube-nocookie.com`, so a hostile string can never reach an iframe. Host validation is exact-match (a lookalike like `youtube.com.evil.example` is rejected) and covered by unit tests.

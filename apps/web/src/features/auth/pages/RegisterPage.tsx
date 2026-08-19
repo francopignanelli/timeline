@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { usernameSchema } from '@timeline/shared';
 import { Button } from '../../../components/ui/Button';
 import { TextField } from '../../../components/ui/fields';
-import { useAuth } from '../mock-auth';
+import { useAuth } from '../auth-provider';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 

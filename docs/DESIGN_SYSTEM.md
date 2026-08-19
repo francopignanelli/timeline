@@ -32,6 +32,23 @@ Implemented as CSS variables in `apps/web/src/styles/tokens.css`, mapped into Ta
 
 Accent (#315CF5) is reserved for: primary actions, selected/active Milestones, links, focus rings, meaningful brand details. Neutral Milestones/Stages stay quiet. Never use accent as a background wash.
 
+### Entity palette (user-selectable Milestone/Stage color)
+
+```css
+--color-entity-amber:  #B26A12;
+--color-entity-rose:   #B03A5B;
+--color-entity-violet: #6B4BB8;
+--color-entity-teal:   #10736B;
+--color-entity-green:  #3F7238;
+--color-entity-slate:  #4D5A68;
+```
+
+Muted, ink-like hues that sit calmly on the warm paper background — the canvas should still read as a document, not a highlighter set. Stored data holds the palette **name** (`AMBER`, …), never a hex value, so the token remains the single source of truth; `DEFAULT` means "keep the theme's own accent/muted behavior".
+
+These are declared on `:root` rather than in `@theme`, unlike every other color token. That is deliberate and load-bearing: Tailwind v4 drops theme variables that no utility class references, and these are only ever read through a `var()` string assembled at runtime from stored data, which the class scanner cannot see. Moving them back into `@theme` silently breaks entity colors (they resolve to nothing).
+
+Tinted Stage bands render as a **wash**, not a slab — the color carries on the border and a 14%-opacity fill so label contrast is preserved.
+
 ### Typography
 
 | Family | Use |
@@ -79,7 +96,7 @@ Cards: radius 12, padding 20–24, 1px border, shadow none/minimal — used only
 ## Canvas visual language
 
 - Axis/ruler: thin marks, `--timeline-line`, muted JetBrains Mono labels; ruler supports, never dominates. No visible grid on `--bg`.
-- Milestones: `● / │ / label` attached to the axis — not floating cards. Selected = accent; neutral = `--text-secondary`.
+- Milestones: `◆ / │ / label` attached to the axis — not floating cards. The marker is a **diamond**: a 10px square rotated 45°, 2px corner radius, a soft top-left gradient shine and a 1px ambient shadow to lift it off the paper. It sits inside a 14px layout box so its 14.1px diagonal matches the old circle's footprint exactly — the collision math is shape-independent by construction. The diamond is **always** filled with color — `--accent` by default, or the entity color if the user set one — never a muted/inactive gray; hover brightens it (CSS `brightness`) rather than toggling color on. Selected/highlighted scale the diamond up (`scale-125`) instead of recoloring it, since color is already always "on" (state must never rely on color alone — a11y rule below).
 - Stages: subtle horizontal bands (`──══──`), muted fills at low opacity + 1px definition; overlaps distinguished by lane + label + border treatment, never color alone.
 - Empty/loading states reuse the dot–line–arrow vocabulary.
 

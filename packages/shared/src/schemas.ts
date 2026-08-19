@@ -1,6 +1,15 @@
 import { z } from 'zod';
-import { DATE_PRECISIONS, TIME_UNITS, LOCALES, LIMITS } from './constants';
+import {
+  DATE_PRECISIONS,
+  TIME_UNITS,
+  LOCALES,
+  LIMITS,
+  ENTITY_COLORS,
+  IMAGE_MIME_TYPES,
+  FILE_MIME_TYPES,
+} from './constants';
 import { isValidDateString, comparePartialDates } from './partial-date';
+import { YOUTUBE_ID_RE } from './youtube';
 
 export const datePrecisionSchema = z.enum(DATE_PRECISIONS);
 
@@ -65,11 +74,77 @@ export const createTimelineSchema = timelineBaseSchema.superRefine(checkTemporal
 // merged entity (the partial body alone cannot see both sides).
 export const updateTimelineSchema = timelineBaseSchema.partial();
 
-export const contentBlockSchema = z.object({
+const textBlockSchema = z.object({
   id: z.string().min(1),
   type: z.literal('TEXT'),
   order: z.number().int().min(0),
   text: z.string().max(LIMITS.TEXT_BLOCK_MAX),
+});
+
+// Only a validated video id is ever stored — the embed URL is rebuilt from it
+// at render time, so no user-supplied string reaches an iframe src.
+const youTubeBlockSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('YOUTUBE'),
+  order: z.number().int().min(0),
+  youtubeId: z.string().regex(YOUTUBE_ID_RE, { message: 'Expected a YouTube video id' }),
+  caption: z.string().max(LIMITS.TITLE_MAX).optional(),
+});
+
+/** Keys are minted server-side as `u/<userId>/<ulid><ext>`; shape is pinned so a client can't smuggle a path. */
+export const s3KeySchema = z
+  .string()
+  .max(300)
+  .regex(/^u\/[A-Za-z0-9_-]+\/[A-Za-z0-9._-]+$/, { message: 'Invalid object key' });
+
+const uploadBlockFields = {
+  id: z.string().min(1),
+  order: z.number().int().min(0),
+  s3Key: s3KeySchema,
+  fileName: z.string().min(1).max(LIMITS.FILE_NAME_MAX),
+  size: z.number().int().positive(),
+};
+
+const imageBlockSchema = z.object({
+  ...uploadBlockFields,
+  type: z.literal('IMAGE'),
+  contentType: z.enum(IMAGE_MIME_TYPES),
+  size: z.number().int().positive().max(LIMITS.IMAGE_MAX_BYTES),
+  caption: z.string().max(LIMITS.TITLE_MAX).optional(),
+});
+
+const fileBlockSchema = z.object({
+  ...uploadBlockFields,
+  type: z.literal('FILE'),
+  contentType: z.enum(FILE_MIME_TYPES),
+  size: z.number().int().positive().max(LIMITS.FILE_MAX_BYTES),
+});
+
+export const contentBlockSchema = z.discriminatedUnion('type', [
+  textBlockSchema,
+  youTubeBlockSchema,
+  imageBlockSchema,
+  fileBlockSchema,
+]);
+
+/** Body of POST /uploads/presign — validated before any URL is issued. */
+export const presignUploadSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('IMAGE'),
+    fileName: z.string().min(1).max(LIMITS.FILE_NAME_MAX),
+    contentType: z.enum(IMAGE_MIME_TYPES),
+    size: z.number().int().positive().max(LIMITS.IMAGE_MAX_BYTES),
+  }),
+  z.object({
+    kind: z.literal('FILE'),
+    fileName: z.string().min(1).max(LIMITS.FILE_NAME_MAX),
+    contentType: z.enum(FILE_MIME_TYPES),
+    size: z.number().int().positive().max(LIMITS.FILE_MAX_BYTES),
+  }),
+]);
+
+export const viewUrlsSchema = z.object({
+  keys: z.array(s3KeySchema).max(LIMITS.BLOCKS_PER_MILESTONE_MAX),
 });
 
 const milestoneBaseSchema = z.object({
@@ -96,12 +171,42 @@ export const updateProfileSchema = z.object({
   displayName: z.string().trim().min(1).max(LIMITS.DISPLAY_NAME_MAX),
   bio: z.string().max(LIMITS.BIO_MAX).optional(),
   location: z.string().max(LIMITS.LOCATION_MAX).optional(),
+  // Empty string is explicitly allowed so a user can clear a previously set
+  // website; JSON drops `undefined`, so omitting the key can't express "erase".
   website: z
-    .string()
-    .max(LIMITS.WEBSITE_MAX)
-    .regex(/^https?:\/\/\S+$/i, { message: 'Must be an http(s) URL' })
+    .union([
+      z.literal(''),
+      z.string().max(LIMITS.WEBSITE_MAX).regex(/^https?:\/\/\S+$/i, {
+        message: 'Must be an http(s) URL',
+      }),
+    ])
     .optional(),
   locale: localeSchema,
+});
+
+export const linkMilestoneSchema = z.union([
+  z.object({ milestoneId: z.string().min(1) }),
+  z.object({ milestone: createMilestoneSchema }),
+]);
+
+export const linkStageSchema = z.union([
+  z.object({ stageId: z.string().min(1) }),
+  z.object({ stage: createStageSchema }),
+]);
+
+export const entityColorSchema = z.enum(ENTITY_COLORS);
+
+export const updateMilestoneLinkSchema = z.object({
+  displayOrder: z.number().int().min(0).optional(),
+  isHighlighted: z.boolean().optional(),
+  isHidden: z.boolean().optional(),
+  color: entityColorSchema.optional(),
+});
+
+export const updateStageLinkSchema = z.object({
+  displayStyle: z.string().max(50).optional(),
+  isHighlighted: z.boolean().optional(),
+  color: entityColorSchema.optional(),
 });
 
 export type CreateTimelineInput = z.infer<typeof createTimelineSchema>;
@@ -111,3 +216,8 @@ export type UpdateMilestoneInput = z.infer<typeof updateMilestoneSchema>;
 export type CreateStageInput = z.infer<typeof createStageSchema>;
 export type UpdateStageInput = z.infer<typeof updateStageSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type LinkMilestoneInput = z.infer<typeof linkMilestoneSchema>;
+export type LinkStageInput = z.infer<typeof linkStageSchema>;
+export type UpdateMilestoneLinkInput = z.infer<typeof updateMilestoneLinkSchema>;
+export type UpdateStageLinkInput = z.infer<typeof updateStageLinkSchema>;
+export type PresignUploadInput = z.infer<typeof presignUploadSchema>;

@@ -69,7 +69,7 @@ Viewport-aware rendering from day one: layers receive the visible date range fro
 - **Request flow**: API Gateway validates the JWT → Lambda middleware builds an auth context from authorizer claims (never from the body) → module route validates input with shared zod schema → service enforces authorization (ownership in MVP) → repository executes the documented access pattern.
 - **Node.js 22**, esbuild bundling via CDK `NodejsFunction`.
 
-## AWS architecture (MVP — nothing deployed until the Phase 3 cost review is approved)
+## AWS architecture (MVP — fully deployed as of Phase 6: Cognito, API Gateway, Lambda, DynamoDB, full Timelines/Milestones/Stages CRUD + linking)
 
 ```
 Browser (localhost dev)

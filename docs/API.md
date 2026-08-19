@@ -27,7 +27,7 @@
 | GET | `/timelines/{timelineId}` | Timeline meta (owner only). |
 | PATCH | `/timelines/{timelineId}` | Partial update of meta fields. |
 | DELETE | `/timelines/{timelineId}` | Deletes meta + link items only; never referenced Milestones/Stages. |
-| GET | `/timelines/{timelineId}/content` | Canvas payload: `{ timeline, milestones: [{ ref, milestone }], stages: [{ ref, stage }] }` (AP5 + AP6). `ref` carries the per-timeline presentation metadata. |
+| GET | `/timelines/{timelineId}/content` | Canvas payload: `{ milestones: [{ ref, milestone }], stages: [{ ref, stage }] }` (AP5 + AP6). `ref` carries the per-timeline presentation metadata. Timeline meta itself comes from `GET /timelines/{timelineId}` — the frontend fetches both in parallel, so `content` doesn't duplicate it. |
 
 ### Milestones
 
@@ -36,6 +36,7 @@
 | GET | `/milestones` | List own milestones (AP8) — the "add existing" picker. |
 | POST | `/milestones` | Create. Body: title, date, blocks (TEXT only in MVP). |
 | GET | `/milestones/{milestoneId}` | Fetch one (owner only). |
+| GET | `/milestones/{milestoneId}/timeline-count` | `{ count }` — how many timelines reference it (AP10). Added beyond the original endpoint list to back the modal's "Appears in N timelines" footer (UI_SPEC.md) without over-fetching full content on every view. |
 | PATCH | `/milestones/{milestoneId}` | Update title, date, blocks. |
 | DELETE | `/milestones/{milestoneId}` | Deletes milestone + **all** its timeline links (AP10, transactional). UI must confirm. |
 
@@ -47,9 +48,19 @@
 | PATCH | `/timelines/{timelineId}/milestones/{milestoneId}` | Update presentation: displayOrder, isHighlighted, isHidden. |
 | DELETE | `/timelines/{timelineId}/milestones/{milestoneId}` | Unlink only — milestone untouched. |
 
+### Uploads (Phase 7 — S3, user-approved cost review)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/uploads/presign` | Body: `{ kind: IMAGE\|FILE, fileName, contentType, size }`. Validates MIME against the allowlist and size against the cap **before** signing; returns `{ uploadUrl, key }`. The signature pins Content-Type and Content-Length, so the client cannot upload something other than what was validated. 5-minute TTL. |
+| POST | `/uploads/view-urls` | Body: `{ keys: [] }` → `{ urls: { key: url } }`, presigned GET, 15-minute TTL, inline disposition (images). |
+| POST | `/uploads/download-urls` | Same, with `attachment` disposition — a document can never render inline as an active document. |
+
+Keys are minted server-side as `u/<userId>/<ulid><ext>`. Ownership is decidable from the key alone: any key not prefixed with the caller's own id returns **404** (no existence leak). Bucket is private with all public access blocked; there is no unsigned path to an object.
+
 ### Stages & Timeline↔Stage links
 
-Identical shape to milestones: `/stages`, `/stages/{stageId}`, `/timelines/{timelineId}/stages`, `/timelines/{timelineId}/stages/{stageId}`. Stage body: title, description?, start, end?, ongoing. Link presentation: displayStyle?, isHighlighted.
+Identical shape to milestones: `/stages`, `/stages/{stageId}`, `/stages/{stageId}/timeline-count`, `/timelines/{timelineId}/stages`, `/timelines/{timelineId}/stages/{stageId}`. Stage body: title, description?, start, end?, ongoing. Link presentation: displayStyle?, isHighlighted.
 
 ## Authorization rules (MVP)
 

@@ -3,6 +3,7 @@ import type { PlacedMilestone } from './domain/collision-layout';
 import type { VerticalLayout } from './domain/vertical-layout';
 import type { TimeScale } from './domain/time-scale';
 import { dayToX } from './domain/time-scale';
+import { entityColorVar } from '../../lib/entity-color';
 
 /** Hard cap on rendered label width (matches max-w truncation in CSS). */
 export const MILESTONE_LABEL_MAX_PX = 160;
@@ -79,6 +80,7 @@ export function MilestoneLayer({
       {positioned.map(({ milestone, x, dotY, showLabel }) => {
         const selected = milestone.id === selectedId;
         const emphasized = selected || milestone.isHighlighted;
+        const custom = entityColorVar(milestone.color);
         return (
           <button
             key={milestone.id}
@@ -90,11 +92,25 @@ export function MilestoneLayer({
             className="group absolute flex -translate-y-1/2 items-center gap-1.5 rounded-md px-1 py-0.5"
             style={{ left: x - 11, top: dotY }}
           >
-            <span
-              className={`size-3.5 shrink-0 rounded-full transition-colors ${
-                emphasized ? 'bg-accent' : 'bg-text-muted group-hover:bg-accent'
-              }`}
-            />
+            {/*
+             * The wrapper keeps a 14px layout box while the rotated inner
+             * square is 10px — its 14.1px diagonal matches the old circle's
+             * footprint exactly, so collision math is unaffected by the shape.
+             */}
+            <span className="relative flex size-3.5 shrink-0 items-center justify-center">
+              <span
+                className={`size-2.5 rotate-45 rounded-[2px] shadow-[0_1px_2px_rgba(20,20,19,0.18)] transition-all group-hover:brightness-125 group-hover:shadow-[0_2px_3px_rgba(20,20,19,0.28)] ${
+                  custom ? '' : 'bg-accent'
+                } ${emphasized ? 'scale-125' : ''}`}
+                style={custom ? { backgroundColor: custom } : undefined}
+              >
+                {/* Shine: a soft top-left highlight fading out before center. */}
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-[2px] bg-gradient-to-br from-white/55 via-white/10 to-transparent"
+                />
+              </span>
+            </span>
             {showLabel && (
               <span
                 className={`truncate rounded-sm bg-bg px-1 text-sm transition-colors ${

@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { TextField } from '../../../components/ui/fields';
-import { useAuth } from '../mock-auth';
+import { useAuth } from '../auth-provider';
 
 export function VerifyPage() {
   const { t } = useTranslation();
@@ -13,7 +13,7 @@ export function VerifyPage() {
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
 
-  if (!pending) return <Navigate to="/register" replace />;
+  if (!pending && !submitting) return <Navigate to="/register" replace />;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +33,7 @@ export function VerifyPage() {
     <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
       <h1 className="font-serif text-3xl text-text">{t('auth.verify.title')}</h1>
       <p className="text-sm text-text-secondary">
-        {t('auth.verify.description', { email: pending.email })}
+        {t('auth.verify.description', { email: pending?.email ?? '' })}
       </p>
       <TextField
         id="verify-code"
@@ -49,7 +49,6 @@ export function VerifyPage() {
       <Button type="submit" disabled={submitting}>
         {submitting ? t('common.loading') : t('auth.verify.submit')}
       </Button>
-      <p className="text-xs text-text-muted">{t('auth.verify.mockHint')}</p>
     </form>
   );
 }
