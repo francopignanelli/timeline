@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GrantableRole, MemberScope } from '@timeline/shared';
-import { LIMITS } from '@timeline/shared';
 import { Button } from '../../components/ui/Button';
-import { SelectField, TextField } from '../../components/ui/fields';
+import { SelectField } from '../../components/ui/fields';
 import { ApiError } from '../../lib/api-client';
+import { UsernameAutocomplete } from './UsernameAutocomplete';
 import {
   useInviteMember,
   useMembers,
@@ -22,19 +22,12 @@ interface CollaboratorsPanelProps {
   canManage: boolean;
 }
 
-/** Must mirror `usernameSchema`'s charset, or existing users can't be typed in. */
-function sanitizeUsername(raw: string): string {
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, '')
-    .slice(0, LIMITS.USERNAME_MAX);
-}
-
 export function CollaboratorsPanel({ scope, resourceId, canManage }: CollaboratorsPanelProps) {
   const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [role, setRole] = useState<GrantableRole>('EDITOR');
   const [error, setError] = useState<string>();
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   const members = useMembers(scope, resourceId, true);
   const invitations = useResourceInvitations(scope, resourceId, canManage);
@@ -47,12 +40,16 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
   const onInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(undefined);
+    setSentTo(null);
     if (username.length < 3) {
       setError(t('collab.errors.usernameTooShort'));
       return;
     }
     try {
       await invite.mutateAsync({ username, role });
+      // Confirm explicitly: the invitation is in-app, so without this the
+      // sender has no signal that anything happened.
+      setSentTo(username);
       setUsername('');
     } catch (err) {
       // 404 here means "no such user" — the only case worth distinguishing.
@@ -72,15 +69,11 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
         <form onSubmit={onInvite} className="flex flex-col gap-3" noValidate>
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[12rem] flex-1">
-              <TextField
+              <UsernameAutocomplete
                 id={`invite-username-${scope}`}
                 label={t('collab.inviteLabel')}
-                placeholder={t('collab.usernamePlaceholder')}
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
                 value={username}
-                onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+                onChange={setUsername}
               />
             </div>
             <div className="w-40">
@@ -117,6 +110,11 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
           </div>
 
           {error && <p className="text-sm text-danger">{error}</p>}
+          {sentTo && (
+            <p role="status" className="text-sm text-accent">
+              {t('collab.inviteSent', { username: sentTo })}
+            </p>
+          )}
         </form>
       )}
 
@@ -177,8 +175,13 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
               key={invitation.id}
               className="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0"
             >
-              <span className="text-sm text-text-secondary">
-                {t(`collab.roles.${invitation.role}`)}
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-mono text-sm text-text">
+                  @{invitation.inviteeUsername}
+                </span>
+                <span className="text-xs text-text-muted">
+                  {t('collab.awaitingReply', { role: t(`collab.roles.${invitation.role}`) })}
+                </span>
               </span>
               <button
                 type="button"

@@ -60,6 +60,8 @@ export const es: TranslationShape = {
     inviteLabel: 'Invitar por nombre de usuario',
     usernamePlaceholder: 'usuario',
     invite: 'Invitar',
+    inviteSent: 'Invitación enviada a @{{username}}.',
+    awaitingReply: 'Invitado como {{role}} — esperando respuesta',
     role: 'Rol',
     roles: { OWNER: 'Propietario', EDITOR: 'Editor', VIEWER: 'Lector' },
     whoHasAccess: 'Quién tiene acceso',

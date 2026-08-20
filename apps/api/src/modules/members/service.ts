@@ -94,6 +94,7 @@ export async function inviteMember(
     resourceId,
     resourceTitle: await resourceTitle(scope, resourceId),
     inviteeId: invitee.id,
+    inviteeUsername: invitee.username,
     inviterId,
     inviterName: inviter?.displayName ?? inviter?.username ?? '',
     role: input.role,

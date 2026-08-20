@@ -52,6 +52,8 @@ export const en = {
     inviteLabel: 'Invite by username',
     usernamePlaceholder: 'username',
     invite: 'Invite',
+    inviteSent: 'Invitation sent to @{{username}}.',
+    awaitingReply: 'Invited as {{role}} — waiting for a reply',
     role: 'Role',
     roles: { OWNER: 'Owner', EDITOR: 'Editor', VIEWER: 'Viewer' },
     whoHasAccess: 'Who has access',

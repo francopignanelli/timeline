@@ -73,14 +73,37 @@ export function PartialDatePicker({ idPrefix, label, value, onChange, error }: P
   const setQuarter = (q: 1 | 2 | 3 | 4) =>
     onChange({ date: anchorForQuarter(q, parsed?.year ?? currentYear), precision: 'QUARTER' });
 
-  const setYear = (raw: string) => {
-    const year = Number(raw);
-    if (!Number.isInteger(year) || year < 1 || year > 9999) return;
+  const commitYear = (year: number) => {
     if (precision === 'MONTH') onChange({ date: anchorForMonth(parsed?.month ?? 1, year), precision });
     else if (precision === 'QUARTER')
       onChange({ date: anchorForQuarter(parsed ? quarterOfMonth(parsed.month) : 1, year), precision });
     else onChange({ date: anchorForYear(year), precision });
   };
+
+  /*
+   * The year field keeps its own text buffer while focused.
+   *
+   * It used to be a controlled input that committed on every keystroke and
+   * rejected anything outside 1–9999 — which silently reverted the two most
+   * common edits: clearing the field ("" parses as 0) and typing a leading
+   * zero. Buffering lets those intermediate states exist on screen; only a
+   * complete, in-range year is committed, and blur discards anything partial.
+   */
+  const [yearText, setYearText] = useState<string | null>(null);
+  const displayedYear = yearText ?? String(parsed?.year ?? currentYear);
+
+  const handleYearChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    setYearText(digits);
+    const year = Number(digits);
+    if (digits.length > 0 && Number.isInteger(year) && year >= 1 && year <= 9999) {
+      commitYear(year);
+    }
+  };
+
+  // Drop the buffer so the field falls back to the committed value — an
+  // incomplete entry never survives losing focus.
+  const handleYearBlur = () => setYearText(null);
 
   const quarterPrefix = i18n.language.startsWith('es') ? 'T' : 'Q';
 
@@ -147,12 +170,17 @@ export function PartialDatePicker({ idPrefix, label, value, onChange, error }: P
 
         {precision !== 'DAY' && (
           <input
-            type="number"
+            // text + numeric inputMode, not type="number": a number input
+            // reports an empty string for anything it considers invalid, which
+            // hides exactly the intermediate states the buffer above exists to
+            // preserve. Digits are filtered in the handler instead.
+            type="text"
+            inputMode="numeric"
             aria-label={t('dates.year')}
-            min={1}
-            max={9999}
-            value={parsed?.year ?? currentYear}
-            onChange={(e) => setYear(e.target.value)}
+            maxLength={4}
+            value={displayedYear}
+            onChange={(e) => handleYearChange(e.target.value)}
+            onBlur={handleYearBlur}
             className={`${inputClasses} w-24 font-mono`}
           />
         )}

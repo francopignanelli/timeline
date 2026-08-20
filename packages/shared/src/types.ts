@@ -82,6 +82,8 @@ export interface Invitation {
   /** Denormalized so the invitee can see what they're being invited to. */
   resourceTitle: string;
   inviteeId: string;
+  /** Denormalized so a pending invitation can say *who* it's waiting on. */
+  inviteeUsername: string;
   inviterId: string;
   inviterName: string;
   role: Role;
