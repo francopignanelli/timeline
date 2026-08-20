@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { TextField } from '../../../components/ui/fields';
+import { authErrorKey } from '../../../lib/auth-errors';
 import { useAuth } from '../auth-provider';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
@@ -34,8 +35,8 @@ export function ForgotPasswordPage() {
     try {
       await requestPasswordReset(email);
       setSent(true);
-    } catch {
-      setErrors({ form: t('common.errorGeneric') });
+    } catch (err) {
+      setErrors({ form: t(authErrorKey(err)) });
     } finally {
       setSubmitting(false);
     }
@@ -52,8 +53,8 @@ export function ForgotPasswordPage() {
     try {
       await confirmPasswordReset(email, code, newPassword);
       navigate('/login');
-    } catch {
-      setErrors({ form: t('common.errorGeneric') });
+    } catch (err) {
+      setErrors({ form: t(authErrorKey(err)) });
     } finally {
       setSubmitting(false);
     }

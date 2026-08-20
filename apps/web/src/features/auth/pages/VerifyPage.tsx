@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { TextField } from '../../../components/ui/fields';
+import { authErrorKey } from '../../../lib/auth-errors';
 import { useAuth } from '../auth-provider';
 
 export function VerifyPage() {
@@ -22,8 +23,9 @@ export function VerifyPage() {
     try {
       await verify(code);
       navigate('/dashboard');
-    } catch {
-      setError(t('auth.errors.codeInvalid'));
+    } catch (err) {
+      const key = authErrorKey(err);
+      setError(t(key === 'common.errorGeneric' ? 'auth.errors.codeInvalid' : key));
     } finally {
       setSubmitting(false);
     }

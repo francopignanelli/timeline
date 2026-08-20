@@ -29,7 +29,7 @@ export const usernameSchema = z
   .string()
   .min(LIMITS.USERNAME_MIN)
   .max(LIMITS.USERNAME_MAX)
-  .regex(/^[a-z0-9_]+$/, { message: 'Lowercase letters, digits and underscores only' });
+  .regex(/^[a-z0-9]+$/, { message: 'Lowercase letters and digits only' });
 
 const titleSchema = z.string().trim().min(1).max(LIMITS.TITLE_MAX);
 

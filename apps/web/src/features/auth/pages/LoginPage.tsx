@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { TextField } from '../../../components/ui/fields';
+import { authErrorKey } from '../../../lib/auth-errors';
 import { useAuth } from '../auth-provider';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
@@ -27,8 +28,8 @@ export function LoginPage() {
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch {
-      setErrors({ form: t('common.errorGeneric') });
+    } catch (err) {
+      setErrors({ form: t(authErrorKey(err)) });
     } finally {
       setSubmitting(false);
     }

@@ -1,4 +1,4 @@
-import { usernameSchema } from '@timeline/shared';
+import { LIMITS, usernameSchema } from '@timeline/shared';
 import type { UpdateProfileInput, UserProfile } from '@timeline/shared';
 import * as repo from '../../repositories/users-repo';
 
@@ -11,9 +11,9 @@ interface CognitoAttrs {
 function fallbackUsername(attrs: CognitoAttrs, userId: string): string {
   const base = (attrs.email?.split('@')[0] ?? userId)
     .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_')
-    .slice(0, 30);
-  return usernameSchema.safeParse(base).success ? base : `user_${userId.slice(0, 20)}`;
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, LIMITS.USERNAME_MAX);
+  return usernameSchema.safeParse(base).success ? base : `user${userId.replace(/[^a-z0-9]/g, '').slice(0, 11)}`;
 }
 
 /** GET /me creates the profile on first call (API.md) — Cognito attributes seed it (DECISIONS #20). */

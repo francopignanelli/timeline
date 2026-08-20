@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { usernameSchema } from '@timeline/shared';
+import { LIMITS, usernameSchema } from '@timeline/shared';
 import { Button } from '../../../components/ui/Button';
 import { TextField } from '../../../components/ui/fields';
+import { authErrorKey } from '../../../lib/auth-errors';
 import { useAuth } from '../auth-provider';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
+
+/** Strips anything outside the allowed charset live, so whatever the user types stays valid as they type. */
+function sanitizeUsername(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, LIMITS.USERNAME_MAX);
+}
 
 export function RegisterPage() {
   const { t } = useTranslation();
@@ -25,8 +34,15 @@ export function RegisterPage() {
     e.preventDefault();
     const next: typeof errors = {};
     if (!EMAIL_RE.test(email)) next.email = t('auth.errors.invalidEmail');
-    if (!usernameSchema.safeParse(username).success)
-      next.username = t('auth.errors.usernameInvalid');
+    // Input is already sanitized to the allowed charset as the user types
+    // (see onChange below), so the only way validation still fails here is
+    // length — the specific message tells them which.
+    if (!usernameSchema.safeParse(username).success) {
+      next.username =
+        username.length < LIMITS.USERNAME_MIN
+          ? t('auth.errors.usernameTooShort', { min: LIMITS.USERNAME_MIN })
+          : t('auth.errors.usernameInvalid');
+    }
     if (displayName.trim().length === 0) next.displayName = t('auth.errors.displayNameRequired');
     if (password.length < 8) next.password = t('auth.errors.passwordMin');
     setErrors(next);
@@ -35,8 +51,8 @@ export function RegisterPage() {
     try {
       await register({ email, username, displayName: displayName.trim(), password });
       navigate('/verify');
-    } catch {
-      setErrors({ form: t('common.errorGeneric') });
+    } catch (err) {
+      setErrors({ form: t(authErrorKey(err)) });
     } finally {
       setSubmitting(false);
     }
@@ -58,10 +74,13 @@ export function RegisterPage() {
         id="register-username"
         label={t('auth.register.username')}
         autoComplete="username"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
         value={username}
-        onChange={(e) => setUsername(e.target.value)}
+        onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
         error={errors.username}
-        hint={t('auth.register.usernameHint')}
+        hint={t('auth.register.usernameHint', { max: LIMITS.USERNAME_MAX })}
       />
       <TextField
         id="register-display-name"
