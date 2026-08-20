@@ -8,7 +8,7 @@ import * as service from './service';
 export const membersRoutes = new Hono();
 
 /** Timeline and milestone collaboration share one implementation, two mounts. */
-function mountScope(scope: MemberScope, base: 'timelines' | 'milestones') {
+function mountScope(scope: MemberScope, base: 'timelines' | 'milestones' | 'stages') {
   membersRoutes.get(`/${base}/:id/members`, async (c) => {
     const members = await service.listMembers(getUserId(c), scope, c.req.param('id'));
     return c.json(members);
@@ -55,6 +55,7 @@ function mountScope(scope: MemberScope, base: 'timelines' | 'milestones') {
 
 mountScope('TIMELINE', 'timelines');
 mountScope('MILESTONE', 'milestones');
+mountScope('STAGE', 'stages');
 
 /** Disclosure shown before a timeline-scoped invite is sent (DECISIONS #35). */
 membersRoutes.get('/timelines/:id/share-impact', async (c) => {

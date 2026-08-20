@@ -5,6 +5,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -14,6 +15,12 @@ import type { Construct } from 'constructs';
 export interface ApiStackProps extends StackProps {
   userPool: cognito.UserPool;
   userPoolClientId: string;
+  /**
+   * SSM parameter **name** holding the setlist.fm API key — never the value.
+   * The parameter is created out-of-band (see docs/AWS_SETUP.md) so the secret
+   * never enters this repository or a CloudFormation template.
+   */
+  setlistApiKeyParam: string;
   /** Every origin allowed to call the API — dev (localhost) and, once deployed, the hosted frontend. */
   corsOrigins: string[];
 }
@@ -37,6 +44,10 @@ export class ApiStack extends Stack {
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: RemovalPolicy.RETAIN,
+      // Lets cache entries expire themselves (currently setlist.fm responses).
+      // Only items that carry a `ttl` attribute are affected — no domain item
+      // sets one, so nothing user-owned can be expired by this.
+      timeToLiveAttribute: 'ttl',
     });
     table.addGlobalSecondaryIndex({
       indexName: 'GSI1',
@@ -92,8 +103,26 @@ export class ApiStack extends Stack {
         TABLE_NAME: table.tableName,
         CORS_ORIGIN: props.corsOrigins.join(','),
         MEDIA_BUCKET: mediaBucket.bucketName,
+        // The parameter's name, not its value — the secret is resolved at
+        // runtime so it never appears in the template or in git.
+        SETLIST_API_KEY_PARAM: props.setlistApiKeyParam,
       },
     });
+
+    // Read access to exactly one parameter, plus decryption of SecureStrings
+    // via the AWS-managed SSM key.
+    fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameter'],
+        resources: [
+          Stack.of(this).formatArn({
+            service: 'ssm',
+            resource: 'parameter',
+            resourceName: props.setlistApiKeyParam.replace(/^\//, ''),
+          }),
+        ],
+      }),
+    );
     table.grantReadWriteData(fn);
     // Least privilege: the function presigns and deletes objects, and never
     // needs to list the bucket or touch its configuration.

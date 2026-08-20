@@ -12,6 +12,18 @@ export function listOwnMilestones(ownerId: string): Promise<Milestone[]> {
   return repo.listMilestonesByOwner(ownerId);
 }
 
+/**
+ * Milestones shared *with* the caller via an accepted milestone-scoped
+ * invitation (AP12). Kept separate from the owned list so the UI can present
+ * "mine" and "shared with me" as distinct groups rather than one merged pile.
+ */
+export async function listSharedMilestones(userId: string): Promise<Milestone[]> {
+  const memberships = await membersRepo.listMembershipsForUser(userId, 'MILESTONE');
+  if (memberships.length === 0) return [];
+  const byId = await linksRepo.batchGetMilestones(memberships.map((m) => m.resourceId));
+  return [...byId.values()];
+}
+
 export function getOwnMilestone(userId: string, id: string): Promise<Milestone> {
   return access.requireMilestone(userId, id, 'VIEW');
 }

@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UpdateMilestoneInput } from '@timeline/shared';
-import { deleteMilestone, listMilestones, updateMilestone } from '../../lib/milestones-api';
+import {
+  deleteMilestone,
+  listMilestones,
+  listSharedMilestones,
+  updateMilestone,
+} from '../../lib/milestones-api';
 
 export function useOwnMilestones() {
   return useQuery({ queryKey: ['milestones'], queryFn: listMilestones });
@@ -26,4 +31,9 @@ export function useDeleteMilestone() {
       void queryClient.invalidateQueries({ queryKey: ['timelines'] });
     },
   });
+}
+
+/** Milestones shared with me via an accepted invitation (kept separate from mine). */
+export function useSharedMilestones() {
+  return useQuery({ queryKey: ['milestones', 'shared'], queryFn: listSharedMilestones });
 }

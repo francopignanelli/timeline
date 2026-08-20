@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { publicMediaUrlsSchema, shareTokenSchema } from '@timeline/shared';
 import * as sharing from '../sharing/service';
 import * as uploads from '../uploads/service';
+import * as setlists from '../setlists/service';
 import { notFound } from '../../http-error';
 
 /**
@@ -40,6 +41,19 @@ publicRoutes.get('/public/timelines/:token/content', async (c) => {
  * caller can neither supply an arbitrary key nor learn one — the private
  * bucket cannot be turned into an open file server.
  */
+/**
+ * Setlist data for a shared timeline. Scoped to the setlists that timeline
+ * actually references, so a share link can't turn the API into an open
+ * setlist.fm proxy running on our key.
+ */
+publicRoutes.get('/public/timelines/:token/setlists/:setlistId', async (c) => {
+  const token = parseToken(c.req.param('token'));
+  const setlistId = c.req.param('setlistId');
+  const allowed = await sharing.publicSetlistIds(token);
+  if (!allowed.has(setlistId)) throw notFound();
+  return c.json(await setlists.getSetlist(setlistId));
+});
+
 publicRoutes.post('/public/timelines/:token/media-urls', async (c) => {
   const token = parseToken(c.req.param('token'));
   const { blockIds } = publicMediaUrlsSchema.parse(await c.req.json());

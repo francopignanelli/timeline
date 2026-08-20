@@ -54,6 +54,7 @@ export const es: TranslationShape = {
     invitedTo: {
       TIMELINE: '{{inviter}} te invitó a colaborar en «{{title}}» como {{role}}.',
       MILESTONE: '{{inviter}} te invitó a colaborar en el hito «{{title}}» como {{role}}.',
+      STAGE: '{{inviter}} te invitó a colaborar en la etapa «{{title}}» como {{role}}.',
     },
     accept: 'Aceptar',
     decline: 'Rechazar',
@@ -83,6 +84,10 @@ export const es: TranslationShape = {
         title: 'Esto da acceso a un solo hito',
         body: 'Un editor puede editar únicamente este hito: su título, fecha y contenido. No obtiene acceso a las líneas de tiempo donde aparece.',
       },
+      STAGE: {
+        title: 'Esto da acceso a una sola etapa',
+        body: 'Un editor puede editar únicamente esta etapa: su título, fechas y descripción. No obtiene acceso a las líneas de tiempo donde aparece.',
+      },
     },
     errors: {
       userNotFound: 'No existe un usuario con ese nombre.',
@@ -98,6 +103,42 @@ export const es: TranslationShape = {
       body: 'Puede haber sido revocado, o la línea de tiempo ya no se comparte.',
     },
   },
+  library: {
+    title: 'Mi biblioteca',
+    tab: { milestones: 'Hitos', stages: 'Etapas' },
+    mine: 'Míos',
+    sharedWithMe: 'Compartidos conmigo',
+    invited: 'Invitaciones',
+    invitedBy: '{{inviter}} te invitó como {{role}}',
+    noShared: 'Todavía no compartieron nada contigo.',
+    empty: {
+      MILESTONE: 'Aún no tienes hitos.',
+      STAGE: 'Aún no tienes etapas.',
+    },
+    addTo: {
+      action: 'Agregar a línea de tiempo',
+      title: 'Agregar a una línea de tiempo',
+      description: 'Elige en cuál de tus líneas de tiempo debe aparecer «{{title}}».',
+      confirm: 'Agregar',
+      added: 'Agregado a tu línea de tiempo.',
+      noTimelines: 'Aún no tienes líneas de tiempo. Crea una primero.',
+      errors: {
+        pick: 'Elige una línea de tiempo.',
+        alreadyThere: 'Ya está en esa línea de tiempo.',
+      },
+    },
+  },
+  setlist: {
+    urlLabel: 'Enlace de setlist.fm',
+    urlHint: 'Pega la URL de la página de setlist.fm de este show.',
+    attribution: 'Ver en setlist.fm',
+    unavailable: 'No se pudo cargar este setlist ahora.',
+    cover: 'cover de {{artist}}',
+    with: 'con {{artist}}',
+    encore_one: 'Bis',
+    encore_other: 'Bis {{count}}',
+  },
+
   notifications: {
     label: 'Notificaciones',
     labelWithCount_one: 'Notificaciones, {{count}} pendiente',
@@ -261,6 +302,7 @@ export const es: TranslationShape = {
       title: 'Editar hito',
       addBlock: 'Agregar bloque de texto',
       addVideo: 'Agregar video de YouTube',
+      addSetlist: 'Agregar setlist',
       addImage: 'Agregar imagen',
       addFile: 'Adjuntar archivo',
       uploading: 'Subiendo…',
@@ -273,6 +315,7 @@ export const es: TranslationShape = {
     },
     errors: {
       videoInvalid: 'Eso no parece un enlace de video de YouTube.',
+      setlistInvalid: 'Eso no parece un enlace de setlist.fm.',
       uploadType: 'Ese tipo de archivo no está admitido.',
       uploadTooLarge: 'El archivo es demasiado grande (máximo {{max}} MB).',
       uploadFailed: 'La subida falló. Intenta de nuevo.',

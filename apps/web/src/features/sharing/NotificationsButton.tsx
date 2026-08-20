@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { LinkableScope } from '@timeline/shared';
 import { Button } from '../../components/ui/Button';
+import { AddToTimelineDialog } from '../library/AddToTimelineDialog';
 import { useMyInvitations, useRespondToInvitation } from './hooks';
 
 /**
@@ -16,6 +18,14 @@ export function NotificationsButton() {
   const { data: invitations } = useMyInvitations();
   const respond = useRespondToInvitation();
   const count = invitations?.length ?? 0;
+
+  // Offered straight after accepting a milestone/stage invitation, so the item
+  // can be placed on one of your own timelines without hunting for it later.
+  const [addTo, setAddTo] = useState<{
+    scope: LinkableScope;
+    id: string;
+    title: string;
+  } | null>(null);
 
   // Close on outside click and on Escape — the panel is a menu, not a modal,
   // so it must not trap focus or block the page behind it.
@@ -107,7 +117,20 @@ export function NotificationsButton() {
                     </Button>
                     <Button
                       disabled={respond.isPending}
-                      onClick={() => void respond.mutateAsync({ id: invitation.id, accept: true })}
+                      onClick={async () => {
+                        await respond.mutateAsync({ id: invitation.id, accept: true });
+                        // "Add to timeline" only makes sense for something that
+                        // can live *on* a timeline — accepting a timeline
+                        // invitation already puts it on the dashboard.
+                        if (invitation.scope !== 'TIMELINE') {
+                          setAddTo({
+                            scope: invitation.scope,
+                            id: invitation.resourceId,
+                            title: invitation.resourceTitle,
+                          });
+                          setOpen(false);
+                        }
+                      }}
                     >
                       {t('collab.accept')}
                     </Button>
@@ -117,6 +140,16 @@ export function NotificationsButton() {
             </ul>
           )}
         </div>
+      )}
+
+      {addTo && (
+        <AddToTimelineDialog
+          scope={addTo.scope}
+          resourceId={addTo.id}
+          resourceTitle={addTo.title}
+          open
+          onClose={() => setAddTo(null)}
+        />
       )}
     </div>
   );

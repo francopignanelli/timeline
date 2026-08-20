@@ -3,11 +3,20 @@ import { createStageSchema } from '@timeline/shared';
 import type { CreateStageInput, Stage, UpdateStageInput } from '@timeline/shared';
 import * as repo from '../../repositories/stages-repo';
 import * as linksRepo from '../../repositories/links-repo';
+import * as membersRepo from '../../repositories/members-repo';
 import { ddb, tableName } from '../../repositories/dynamo-client';
 import * as access from '../access/service';
 
 export function listOwnStages(ownerId: string): Promise<Stage[]> {
   return repo.listStagesByOwner(ownerId);
+}
+
+/** Stages shared *with* the caller via an accepted stage-scoped invitation (AP12). */
+export async function listSharedStages(userId: string): Promise<Stage[]> {
+  const memberships = await membersRepo.listMembershipsForUser(userId, 'STAGE');
+  if (memberships.length === 0) return [];
+  const byId = await linksRepo.batchGetStages(memberships.map((m) => m.resourceId));
+  return [...byId.values()];
 }
 
 export function getOwnStage(userId: string, id: string): Promise<Stage> {

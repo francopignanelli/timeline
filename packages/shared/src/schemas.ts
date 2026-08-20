@@ -12,6 +12,7 @@ import {
 } from './constants';
 import { isValidDateString, comparePartialDates } from './partial-date';
 import { YOUTUBE_ID_RE } from './youtube';
+import { SETLIST_ID_RE } from './setlist';
 
 export const datePrecisionSchema = z.enum(DATE_PRECISIONS);
 
@@ -132,11 +133,22 @@ const fileBlockSchema = z.object({
   size: z.number().int().positive().max(LIMITS.FILE_MAX_BYTES),
 });
 
+// Only a validated id is stored; the setlist body and its attribution URL are
+// fetched server-side, so no third-party content is trusted from the client.
+const setlistBlockSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('SETLIST'),
+  order: z.number().int().min(0),
+  setlistId: z.string().regex(SETLIST_ID_RE, { message: 'Expected a setlist.fm id' }),
+  caption: z.string().max(LIMITS.TITLE_MAX).optional(),
+});
+
 export const contentBlockSchema = z.discriminatedUnion('type', [
   textBlockSchema,
   youTubeBlockSchema,
   imageBlockSchema,
   fileBlockSchema,
+  setlistBlockSchema,
 ]);
 
 /** Body of POST /uploads/presign — validated before any URL is issued. */

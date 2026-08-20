@@ -18,6 +18,10 @@ const env = {
  * included — each has a distinct origin, and allowing the pattern would mean
  * trusting every branch build.
  */
+// Name only — the secret itself lives in SSM, created out-of-band so it
+// never enters this repository (docs/AWS_SETUP.md).
+const SETLIST_API_KEY_PARAM = '/timeline/dev/setlistfm-api-key';
+
 const corsOrigins = ['http://localhost:5173', 'https://timelinez.netlify.app'];
 
 const authStack = new AuthStack(app, 'TimelineDevAuth', { env });
@@ -26,6 +30,7 @@ new ApiStack(app, 'TimelineDevApi', {
   userPool: authStack.userPool,
   userPoolClientId: authStack.userPoolClient.userPoolClientId,
   corsOrigins,
+  setlistApiKeyParam: SETLIST_API_KEY_PARAM,
 });
 
 Tags.of(app).add('project', 'timeline');

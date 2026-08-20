@@ -20,3 +20,8 @@ export function deleteMilestone(id: string): Promise<void> {
 export function getMilestoneTimelineCount(id: string): Promise<number> {
   return apiClient.get<{ count: number }>(`/milestones/${id}/timeline-count`).then((r) => r.count);
 }
+
+/** Milestones shared with me through an accepted invitation. */
+export function listSharedMilestones(): Promise<Milestone[]> {
+  return apiClient.get<Milestone[]>('/milestones?scope=shared');
+}

@@ -5,8 +5,17 @@ import * as service from './service';
 
 export const milestonesRoutes = new Hono();
 
+/**
+ * `?scope=shared` returns milestones shared with the caller instead of ones
+ * they own. A query param rather than a `/milestones/shared` path so it can
+ * never be confused with `/milestones/:id`.
+ */
 milestonesRoutes.get('/milestones', async (c) => {
-  const milestones = await service.listOwnMilestones(getUserId(c));
+  const userId = getUserId(c);
+  const milestones =
+    c.req.query('scope') === 'shared'
+      ? await service.listSharedMilestones(userId)
+      : await service.listOwnMilestones(userId);
   return c.json(milestones);
 });
 

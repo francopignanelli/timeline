@@ -36,6 +36,9 @@ const TimelinePage = lazy(() =>
 const ProfilePage = lazy(() =>
   import('../features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })),
 );
+const LibraryPage = lazy(() =>
+  import('../features/library/LibraryPage').then((m) => ({ default: m.LibraryPage })),
+);
 const PublicTimelinePage = lazy(() =>
   import('../features/public/PublicTimelinePage').then((m) => ({ default: m.PublicTimelinePage })),
 );
@@ -108,6 +111,10 @@ export const router = createBrowserRouter([
     children: [
       { path: '/dashboard', element: <DashboardPage /> },
       { path: '/timeline/:timelineId', element: <TimelinePage /> },
+      // Two routes, one component: the tab bar links between them, so each
+      // view stays directly linkable.
+      { path: '/milestones', element: <LibraryPage kind="MILESTONE" /> },
+      { path: '/stages', element: <LibraryPage kind="STAGE" /> },
       { path: '/profile', element: <ProfilePage /> },
     ],
   },

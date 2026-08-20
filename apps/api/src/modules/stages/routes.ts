@@ -5,8 +5,13 @@ import * as service from './service';
 
 export const stagesRoutes = new Hono();
 
+/** `?scope=shared` mirrors the milestones endpoint — see the note there. */
 stagesRoutes.get('/stages', async (c) => {
-  const stages = await service.listOwnStages(getUserId(c));
+  const userId = getUserId(c);
+  const stages =
+    c.req.query('scope') === 'shared'
+      ? await service.listSharedStages(userId)
+      : await service.listOwnStages(userId);
   return c.json(stages);
 });
 

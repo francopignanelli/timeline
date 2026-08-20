@@ -140,6 +140,25 @@ export async function getPublicContent(token: string): Promise<PublicContent> {
  * so a caller-supplied key is never signed and the private bucket stays
  * private (SECURITY.md).
  */
+/**
+ * Setlist ids this shared timeline actually references. The public setlist
+ * route serves only these, so a share link can't be used to proxy arbitrary
+ * setlist.fm lookups through our API key.
+ */
+export async function publicSetlistIds(token: string): Promise<Set<string>> {
+  const timeline = await getPublicTimeline(token);
+  const { milestoneRefs } = await linksRepo.listTimelineLinks(timeline.id);
+  const milestoneById = await linksRepo.batchGetMilestones(milestoneRefs.map((r) => r.milestoneId));
+
+  const ids = new Set<string>();
+  for (const milestone of milestoneById.values()) {
+    for (const block of milestone.blocks) {
+      if (block.type === 'SETLIST') ids.add(block.setlistId);
+    }
+  }
+  return ids;
+}
+
 export async function publicMediaKeysByBlockId(token: string): Promise<Map<string, string>> {
   const timeline = await getPublicTimeline(token);
   const { milestoneRefs } = await linksRepo.listTimelineLinks(timeline.id);

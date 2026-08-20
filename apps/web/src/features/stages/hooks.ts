@@ -3,6 +3,7 @@ import type { UpdateStageInput } from '@timeline/shared';
 import {
   deleteStage,
   getStageTimelineCount,
+  listSharedStages,
   listStages,
   updateStage,
 } from '../../lib/stages-api';
@@ -39,4 +40,9 @@ export function useDeleteStage() {
       void queryClient.invalidateQueries({ queryKey: ['timelines'] });
     },
   });
+}
+
+/** Stages shared with me via an accepted invitation (kept separate from mine). */
+export function useSharedStages() {
+  return useQuery({ queryKey: ['stages', 'shared'], queryFn: listSharedStages });
 }

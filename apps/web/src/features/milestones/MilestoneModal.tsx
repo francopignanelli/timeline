@@ -8,7 +8,7 @@ import type {
   TimelineMilestoneRef,
   UploadKind,
 } from '@timeline/shared';
-import { parseYouTubeId, youTubeEmbedUrl, youTubeWatchUrl } from '@timeline/shared';
+import { parseSetlistId, parseYouTubeId, youTubeEmbedUrl, youTubeWatchUrl } from '@timeline/shared';
 import {
   acceptFor,
   getDownloadUrls,
@@ -19,6 +19,7 @@ import {
 } from '../../lib/uploads-api';
 import { useViewUrls } from './useViewUrls';
 import { MentionText } from './MentionText';
+import { SetlistBlockView } from './SetlistBlockView';
 import { CollaboratorsPanel } from '../sharing/CollaboratorsPanel';
 import { Button } from '../../components/ui/Button';
 import { ColorPicker } from '../../components/ui/ColorPicker';
@@ -54,6 +55,8 @@ export function MilestoneModal({
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   // Raw per-video input, so a half-typed URL doesn't destroy the stored id.
   const [videoInputs, setVideoInputs] = useState<Record<string, string>>({});
+  // Same buffering as videos: a half-typed URL must not destroy the stored id.
+  const [setlistInputs, setSetlistInputs] = useState<Record<string, string>>({});
   const [color, setColor] = useState<EntityColor>('DEFAULT');
   const [error, setError] = useState<string>();
   const [uploading, setUploading] = useState(false);
@@ -94,6 +97,13 @@ export function MilestoneModal({
             .map((b) => [b.id, youTubeWatchUrl(b.youtubeId)]),
         ),
       );
+      setSetlistInputs(
+        Object.fromEntries(
+          milestone.blocks
+            .filter((b): b is Extract<ContentBlock, { type: 'SETLIST' }> => b.type === 'SETLIST')
+            .map((b) => [b.id, `https://www.setlist.fm/setlist/${b.setlistId}.html`]),
+        ),
+      );
       setColor(milestoneRef?.color ?? 'DEFAULT');
       setError(undefined);
     }
@@ -108,7 +118,7 @@ export function MilestoneModal({
       return;
     }
 
-    // Resolve every video input to a validated id before writing anything.
+    // Resolve every pasted URL to a validated id before writing anything.
     const resolved: ContentBlock[] = [];
     for (const [i, block] of blocks.entries()) {
       if (block.type === 'YOUTUBE') {
@@ -118,6 +128,13 @@ export function MilestoneModal({
           return;
         }
         resolved.push({ ...block, order: i, youtubeId: videoId });
+      } else if (block.type === 'SETLIST') {
+        const setlistId = parseSetlistId(setlistInputs[block.id] ?? '');
+        if (!setlistId) {
+          setError(t('milestone.errors.setlistInvalid'));
+          return;
+        }
+        resolved.push({ ...block, order: i, setlistId });
       } else {
         resolved.push({ ...block, order: i });
       }
@@ -156,6 +173,12 @@ export function MilestoneModal({
     setBlocks((prev) => [
       ...prev,
       { id: crypto.randomUUID(), type: 'YOUTUBE', order: prev.length, youtubeId: '' },
+    ]);
+
+  const addSetlistBlock = () =>
+    setBlocks((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), type: 'SETLIST', order: prev.length, setlistId: '' },
     ]);
 
   const onPickFile = async (kind: UploadKind, file: File | undefined) => {
@@ -301,6 +324,18 @@ export function MilestoneModal({
                       }
                     />
                   </div>
+                ) : block.type === 'SETLIST' ? (
+                  <TextField
+                    id={`milestone-edit-setlist-${block.id}`}
+                    label={t('setlist.urlLabel')}
+                    inputMode="url"
+                    placeholder="https://www.setlist.fm/setlist/…"
+                    hint={t('setlist.urlHint')}
+                    value={setlistInputs[block.id] ?? ''}
+                    onChange={(e) =>
+                      setSetlistInputs((prev) => ({ ...prev, [block.id]: e.target.value }))
+                    }
+                  />
                 ) : block.type === 'FILE' ? (
                   <div className="flex items-center gap-2 text-sm text-text">
                     <span aria-hidden="true">📎</span>
@@ -353,6 +388,9 @@ export function MilestoneModal({
               </Button>
               <Button variant="tertiary" onClick={addVideoBlock}>
                 + {t('milestone.edit.addVideo')}
+              </Button>
+              <Button variant="tertiary" onClick={addSetlistBlock}>
+                + {t('milestone.edit.addSetlist')}
               </Button>
               <Button
                 variant="tertiary"
@@ -438,6 +476,8 @@ export function MilestoneModal({
                   <figcaption className="text-xs text-text-muted">{block.caption}</figcaption>
                 )}
               </figure>
+            ) : block.type === 'SETLIST' ? (
+              <SetlistBlockView key={block.id} setlistId={block.setlistId} caption={block.caption} />
             ) : block.type === 'FILE' ? (
               <button
                 key={block.id}

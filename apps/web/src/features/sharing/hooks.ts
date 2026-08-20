@@ -141,17 +141,38 @@ export function useMyInvitations() {
   });
 }
 
-export function useRespondToInvitation() {
+/**
+ * Every query an invitation decision can change. Answering in the notifications
+ * panel has to be reflected in the Milestones and Stages views too, so both
+ * call sites invalidate the same list rather than each remembering its own —
+ * that's what keeps invitation status consistent across the app.
+ *
+ * These are prefixes: invalidating `['milestones']` also covers
+ * `['milestones','shared']` and any per-milestone query beneath it.
+ */
+const INVITATION_AFFECTED_KEYS = [
+  ['invitations'],
+  ['timelines'],
+  ['milestones'],
+  ['stages'],
+] as const;
+
+export function useInvalidateAfterInvitationChange() {
   const qc = useQueryClient();
+  return () => {
+    for (const key of INVITATION_AFFECTED_KEYS) {
+      void qc.invalidateQueries({ queryKey: [...key] });
+    }
+  };
+}
+
+export function useRespondToInvitation() {
+  const invalidate = useInvalidateAfterInvitationChange();
   return useMutation({
     mutationFn: async ({ id, accept }: { id: string; accept: boolean }) => {
       if (accept) await acceptInvitation(id);
       else await declineInvitation(id);
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['invitations', 'mine'] });
-      // Accepting adds a timeline to the caller's dashboard.
-      void qc.invalidateQueries({ queryKey: ['timelines'] });
-    },
+    onSuccess: invalidate,
   });
 }

@@ -20,3 +20,8 @@ export function deleteStage(id: string): Promise<void> {
 export function getStageTimelineCount(id: string): Promise<number> {
   return apiClient.get<{ count: number }>(`/stages/${id}/timeline-count`).then((r) => r.count);
 }
+
+/** Stages shared with me through an accepted invitation. */
+export function listSharedStages(): Promise<Stage[]> {
+  return apiClient.get<Stage[]>('/stages?scope=shared');
+}

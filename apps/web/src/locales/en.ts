@@ -46,6 +46,7 @@ export const en = {
     invitedTo: {
       TIMELINE: '{{inviter}} invited you to collaborate on “{{title}}” as {{role}}.',
       MILESTONE: '{{inviter}} invited you to collaborate on the milestone “{{title}}” as {{role}}.',
+      STAGE: '{{inviter}} invited you to collaborate on the stage “{{title}}” as {{role}}.',
     },
     accept: 'Accept',
     decline: 'Decline',
@@ -75,6 +76,10 @@ export const en = {
         title: 'This grants access to one milestone',
         body: 'An editor can edit this milestone only — its title, date and content. They get no access to the timelines it appears on.',
       },
+      STAGE: {
+        title: 'This grants access to one stage',
+        body: 'An editor can edit this stage only — its title, dates and description. They get no access to the timelines it appears on.',
+      },
     },
     errors: {
       userNotFound: 'No user with that username.',
@@ -90,6 +95,42 @@ export const en = {
       body: 'It may have been revoked, or the timeline is no longer shared.',
     },
   },
+  library: {
+    title: 'My library',
+    tab: { milestones: 'Milestones', stages: 'Stages' },
+    mine: 'Mine',
+    sharedWithMe: 'Shared with me',
+    invited: 'Invitations',
+    invitedBy: '{{inviter}} invited you as {{role}}',
+    noShared: 'Nothing shared with you yet.',
+    empty: {
+      MILESTONE: 'You have no milestones yet.',
+      STAGE: 'You have no stages yet.',
+    },
+    addTo: {
+      action: 'Add to timeline',
+      title: 'Add to a timeline',
+      description: 'Choose which of your timelines “{{title}}” should appear on.',
+      confirm: 'Add',
+      added: 'Added to your timeline.',
+      noTimelines: 'You have no timelines yet. Create one first.',
+      errors: {
+        pick: 'Choose a timeline.',
+        alreadyThere: 'It is already on that timeline.',
+      },
+    },
+  },
+  setlist: {
+    urlLabel: 'setlist.fm link',
+    urlHint: 'Paste the setlist.fm page URL for this show.',
+    attribution: 'View on setlist.fm',
+    unavailable: 'This setlist could not be loaded right now.',
+    cover: '{{artist}} cover',
+    with: 'with {{artist}}',
+    encore_one: 'Encore',
+    encore_other: 'Encore {{count}}',
+  },
+
   notifications: {
     label: 'Notifications',
     labelWithCount_one: 'Notifications, {{count}} pending',
@@ -253,6 +294,7 @@ export const en = {
       title: 'Edit milestone',
       addBlock: 'Add text block',
       addVideo: 'Add YouTube video',
+      addSetlist: 'Add setlist',
       addImage: 'Add image',
       addFile: 'Attach file',
       uploading: 'Uploading…',
@@ -264,6 +306,7 @@ export const en = {
     },
     errors: {
       videoInvalid: "That doesn't look like a YouTube video link.",
+      setlistInvalid: "That doesn't look like a setlist.fm link.",
       uploadType: "That file type isn't supported.",
       uploadTooLarge: 'That file is too large (max {{max}} MB).',
       uploadFailed: 'Upload failed. Please try again.',

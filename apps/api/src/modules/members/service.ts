@@ -13,13 +13,22 @@ import * as usersRepo from '../../repositories/users-repo';
 import * as linksRepo from '../../repositories/links-repo';
 import * as timelinesRepo from '../../repositories/timelines-repo';
 import * as milestonesRepo from '../../repositories/milestones-repo';
+import * as stagesRepo from '../../repositories/stages-repo';
 import * as access from '../access/service';
 import { HttpError, conflict, notFound } from '../../http-error';
 
 /** MANAGE on the resource — only an owner can hand out or revoke access. */
 async function requireManage(userId: string, scope: MemberScope, resourceId: string): Promise<void> {
   if (scope === 'TIMELINE') await access.requireTimeline(userId, resourceId, 'MANAGE');
-  else await access.requireMilestone(userId, resourceId, 'MANAGE');
+  else if (scope === 'MILESTONE') await access.requireMilestone(userId, resourceId, 'MANAGE');
+  else await access.requireStage(userId, resourceId, 'MANAGE');
+}
+
+/** VIEW on the resource — any member may see who else has access. */
+async function requireView(userId: string, scope: MemberScope, resourceId: string): Promise<void> {
+  if (scope === 'TIMELINE') await access.requireTimeline(userId, resourceId, 'VIEW');
+  else if (scope === 'MILESTONE') await access.requireMilestone(userId, resourceId, 'VIEW');
+  else await access.requireStage(userId, resourceId, 'VIEW');
 }
 
 /** Denormalized onto the invitation so the invitee can see what they're being invited to. */
@@ -28,7 +37,8 @@ async function resourceTitle(scope: MemberScope, resourceId: string): Promise<st
   // is no cycle to dodge here. A dynamic import() in a bundled Lambda is a
   // needless runtime risk on a path that must not fail.
   if (scope === 'TIMELINE') return (await timelinesRepo.getTimeline(resourceId))?.title ?? '';
-  return (await milestonesRepo.getMilestone(resourceId))?.title ?? '';
+  if (scope === 'MILESTONE') return (await milestonesRepo.getMilestone(resourceId))?.title ?? '';
+  return (await stagesRepo.getStage(resourceId))?.title ?? '';
 }
 
 export async function listMembers(
@@ -37,8 +47,7 @@ export async function listMembers(
   resourceId: string,
 ): Promise<Member[]> {
   // Any viewer may see who else has access; only managers may change it.
-  if (scope === 'TIMELINE') await access.requireTimeline(userId, resourceId, 'VIEW');
-  else await access.requireMilestone(userId, resourceId, 'VIEW');
+  await requireView(userId, scope, resourceId);
   return membersRepo.listMembers(scope, resourceId);
 }
 

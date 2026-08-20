@@ -15,12 +15,19 @@ export const GRANTABLE_ROLES = ['EDITOR', 'VIEWER'] as const;
 export type GrantableRole = (typeof GRANTABLE_ROLES)[number];
 
 /**
- * Collaboration is granted explicitly at one of two scopes (DECISIONS #35):
- * MILESTONE grants edit rights on that milestone alone; TIMELINE grants them
- * across the timeline — its meta, stages, and every milestone linked to it.
+ * Collaboration is granted explicitly per scope (DECISIONS #35): MILESTONE or
+ * STAGE grants rights on that one entity; TIMELINE grants them across the
+ * timeline — its meta, its stages, and every milestone linked to it.
+ *
+ * Each value doubles as the DynamoDB partition prefix for that entity, so a
+ * membership item lives in the same partition as the thing it grants access to.
  */
-export const MEMBER_SCOPES = ['TIMELINE', 'MILESTONE'] as const;
+export const MEMBER_SCOPES = ['TIMELINE', 'MILESTONE', 'STAGE'] as const;
 export type MemberScope = (typeof MEMBER_SCOPES)[number];
+
+/** Scopes that can be added onto one of your own timelines after accepting. */
+export const LINKABLE_SCOPES = ['MILESTONE', 'STAGE'] as const;
+export type LinkableScope = (typeof LINKABLE_SCOPES)[number];
 
 export const INVITATION_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED'] as const;
 export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
@@ -42,7 +49,7 @@ export function roleAllows(role: Role, capability: Capability): boolean {
 export const LOCALES = ['en', 'es'] as const;
 export type Locale = (typeof LOCALES)[number];
 
-export const CONTENT_BLOCK_TYPES = ['TEXT', 'YOUTUBE', 'IMAGE', 'FILE'] as const;
+export const CONTENT_BLOCK_TYPES = ['TEXT', 'YOUTUBE', 'IMAGE', 'FILE', 'SETLIST'] as const;
 export type ContentBlockType = (typeof CONTENT_BLOCK_TYPES)[number];
 
 export const UPLOAD_KINDS = ['IMAGE', 'FILE'] as const;
@@ -113,4 +120,9 @@ export const LIMITS = {
   USER_SEARCH_MIN_CHARS: 2,
   USER_SEARCH_LIMIT: 5,
   INVITATION_TTL_DAYS: 14,
+  /**
+   * Setlists are effectively immutable once published, so a long cache is safe
+   * and keeps us far inside setlist.fm's rate limits (their rule 2 and 3).
+   */
+  SETLIST_CACHE_DAYS: 30,
 } as const;

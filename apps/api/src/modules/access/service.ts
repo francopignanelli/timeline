@@ -118,7 +118,10 @@ export async function requireMilestone(
   return access.resource;
 }
 
-/** Stages have no per-stage membership — access flows from the timelines that link them. */
+/**
+ * Stage access mirrors milestones: ownership, then a stage-scoped membership,
+ * then any timeline that links it and the caller can act on.
+ */
 export async function requireStage(
   userId: string,
   stageId: string,
@@ -127,6 +130,9 @@ export async function requireStage(
   const stage = await stagesRepo.getStage(stageId);
   if (!stage) throw notFound();
   if (stage.ownerId === userId) return stage;
+
+  const direct = await membersRepo.getMember('STAGE', stageId, userId);
+  if (direct && roleAllows(direct.role, capability)) return stage;
 
   const refs = await linksRepo.listStageRefs(stageId);
   const timelineIds = refs.map((r) => r.timelineId);

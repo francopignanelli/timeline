@@ -149,8 +149,46 @@ export interface FileBlock extends UploadBlockBase {
   contentType: FileMimeType;
 }
 
+/**
+ * An embedded setlist.fm setlist. Stores only the id — the setlist body and
+ * its canonical attribution URL are fetched server-side and cached, so the
+ * third-party payload never has to be trusted or duplicated into a milestone.
+ */
+export interface SetlistBlock extends BlockBase {
+  type: 'SETLIST';
+  setlistId: string;
+  caption?: string;
+}
+
 /** Discriminated on `type`; future media blocks (AUDIO/LINK) join this union. */
-export type ContentBlock = TextBlock | YouTubeBlock | ImageBlock | FileBlock;
+export type ContentBlock = TextBlock | YouTubeBlock | ImageBlock | FileBlock | SetlistBlock;
+
+/** One song within a set. */
+export interface SetlistSong {
+  name: string;
+  info?: string;
+  coverArtistName?: string;
+  withArtistName?: string;
+}
+
+/**
+ * Normalized setlist.fm data. Deliberately *not* the raw API shape: the server
+ * flattens it so the client depends on our contract rather than a third
+ * party's, and so only the fields we actually render get cached.
+ */
+export interface SetlistData {
+  id: string;
+  /** Canonical setlist.fm page. Attribution to it is required by their ToS. */
+  url: string;
+  artistName: string;
+  venueName: string;
+  cityName: string;
+  countryName: string;
+  tourName?: string;
+  /** As provided by the API: `dd-MM-yyyy`. */
+  eventDate: string;
+  sets: { name?: string; encore?: number; songs: SetlistSong[] }[];
+}
 
 /**
  * A resolved `@username` reference. Resolved once at write time rather than
@@ -226,6 +264,9 @@ export type PublicTimeline = Omit<Timeline, 'ownerId' | 'shareToken'>;
 export type PublicContentBlock =
   | TextBlock
   | YouTubeBlock
+  // Setlist blocks hold only an id — no object key, no user identifier — so
+  // they cross the public boundary unchanged.
+  | SetlistBlock
   | Omit<ImageBlock, 's3Key'>
   | Omit<FileBlock, 's3Key'>;
 
