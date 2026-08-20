@@ -31,8 +31,9 @@ Single developer, low request volumes, tiny data. Every chosen service is server
 - **Purpose**: HTTPS entry point + JWT validation + throttling.
 - **Expected dev usage**: well under 100k requests/month.
 - **Pricing**: $1.00/million requests (first 1M/month free for 12 months on new accounts). Dev: $0–$0.10.
-- **Risks**: runaway client retry loops.
-- **Safeguards**: stage throttling (20 rps / burst 50); TanStack Query retry limits; no polling loops in the app.
+- **Risks**: runaway client retry loops; polling that scales with users × open tabs.
+- **Safeguards**: stage throttling (20 rps / burst 50, plus 5 rps on the public routes); TanStack Query retry limits.
+- **The one poll in the app**: the notifications bell re-checks pending invitations every 30s, and **only while its tab is visible** (`refetchIntervalInBackground` stays false). That's ~120 requests per active hour per tab — roughly 29k/month for one user working 8h/day, against a 1M/month free tier. Comfortable now; if the user count grows into the thousands, this is the first thing to replace with a WebSocket push.
 - **Deferrable?** No (needed when the backend phase starts).
 
 ### AWS Lambda

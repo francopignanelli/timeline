@@ -111,8 +111,34 @@ export function useRemoveMember(scope: MemberScope, resourceId: string) {
 }
 
 /** Pending invitations addressed to the signed-in user. */
+/** How often the notifications bell re-checks while the tab is in front. */
+const NOTIFICATIONS_POLL_MS = 30_000;
+
+/**
+ * Pending invitations, kept fresh without a page reload.
+ *
+ * Polling rather than push: a WebSocket API would be true real-time but adds a
+ * stateful connection surface (connection table, connect/disconnect routes,
+ * reconnection handling) for a payload that changes a few times a day. At one
+ * request per 30s per *visible* tab this stays comfortably inside the free
+ * tier (COSTS.md).
+ *
+ * Two deliberate scopings:
+ *   • `refetchIntervalInBackground` stays false (the default), so a tab left
+ *     open in another window costs nothing.
+ *   • `refetchOnWindowFocus` is re-enabled *here only*. It's off globally
+ *     because refetches were clobbering in-progress edit forms (DECISIONS
+ *     #38) — this query feeds no form, so it's safe and makes the common
+ *     "switch back to the tab" case feel instant.
+ */
 export function useMyInvitations() {
-  return useQuery({ queryKey: ['invitations', 'mine'], queryFn: listMyInvitations });
+  return useQuery({
+    queryKey: ['invitations', 'mine'],
+    queryFn: listMyInvitations,
+    refetchInterval: NOTIFICATIONS_POLL_MS,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
 }
 
 export function useRespondToInvitation() {
