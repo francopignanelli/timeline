@@ -9,11 +9,11 @@ import { useAuth } from '../auth-provider';
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
-/** Strips anything outside the allowed charset live, so whatever the user types stays valid as they type. */
+/** Strips anything outside `usernameSchema`'s charset live, so what you type stays valid as you type. */
 function sanitizeUsername(raw: string): string {
   return raw
     .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
+    .replace(/[^a-z0-9_-]/g, '')
     .slice(0, LIMITS.USERNAME_MAX);
 }
 

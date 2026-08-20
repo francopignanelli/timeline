@@ -11,6 +11,8 @@ import type {
 import * as membersRepo from '../../repositories/members-repo';
 import * as usersRepo from '../../repositories/users-repo';
 import * as linksRepo from '../../repositories/links-repo';
+import * as timelinesRepo from '../../repositories/timelines-repo';
+import * as milestonesRepo from '../../repositories/milestones-repo';
 import * as access from '../access/service';
 import { HttpError, conflict, notFound } from '../../http-error';
 
@@ -20,13 +22,13 @@ async function requireManage(userId: string, scope: MemberScope, resourceId: str
   else await access.requireMilestone(userId, resourceId, 'MANAGE');
 }
 
+/** Denormalized onto the invitation so the invitee can see what they're being invited to. */
 async function resourceTitle(scope: MemberScope, resourceId: string): Promise<string> {
-  if (scope === 'TIMELINE') {
-    const { getTimeline } = await import('../../repositories/timelines-repo');
-    return (await getTimeline(resourceId))?.title ?? '';
-  }
-  const { getMilestone } = await import('../../repositories/milestones-repo');
-  return (await getMilestone(resourceId))?.title ?? '';
+  // Static imports: repositories are leaves and import no services, so there
+  // is no cycle to dodge here. A dynamic import() in a bundled Lambda is a
+  // needless runtime risk on a path that must not fail.
+  if (scope === 'TIMELINE') return (await timelinesRepo.getTimeline(resourceId))?.title ?? '';
+  return (await milestonesRepo.getMilestone(resourceId))?.title ?? '';
 }
 
 export async function listMembers(

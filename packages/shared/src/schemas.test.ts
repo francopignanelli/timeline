@@ -144,10 +144,13 @@ describe('createStageSchema', () => {
 describe('profile schemas', () => {
   it('validates usernames', () => {
     expect(usernameSchema.safeParse('franco18').success).toBe(true);
+    // Separators must stay valid: real accounts already hold them, and
+    // rejecting them made those users unsearchable and un-inviteable.
+    expect(usernameSchema.safeParse('franco_dev').success).toBe(true);
+    expect(usernameSchema.safeParse('franco-dev').success).toBe(true);
     expect(usernameSchema.safeParse('Franco').success).toBe(false); // uppercase
     expect(usernameSchema.safeParse('fr').success).toBe(false); // too short
     expect(usernameSchema.safeParse('has space').success).toBe(false);
-    expect(usernameSchema.safeParse('franco_18').success).toBe(false); // underscore no longer allowed
     expect(usernameSchema.safeParse('a'.repeat(16)).success).toBe(false); // over 15 chars
     expect(usernameSchema.safeParse('a'.repeat(15)).success).toBe(true); // exactly 15 is fine
   });

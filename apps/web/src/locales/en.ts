@@ -130,7 +130,7 @@ export const en = {
       title: 'Create your account',
       email: 'Email',
       username: 'Username',
-      usernameHint: 'Lowercase letters and numbers, up to {{max}} characters',
+      usernameHint: 'Lowercase letters, numbers, - and _ — up to {{max}} characters',
       displayName: 'Display name',
       password: 'Password',
       submit: 'Create account',
@@ -157,7 +157,7 @@ export const en = {
     errors: {
       invalidEmail: 'Enter a valid email address',
       passwordMin: 'Password must be at least 8 characters',
-      usernameInvalid: 'Lowercase letters and numbers only',
+      usernameInvalid: 'Use lowercase letters, numbers, - or _',
       usernameTooShort: 'At least {{min}} characters',
       displayNameRequired: 'Enter a name',
       codeInvalid: 'Enter the 6-digit code',

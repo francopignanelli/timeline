@@ -7,7 +7,10 @@ import {
   TransactWriteCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { TransactionCanceledException } from '@aws-sdk/client-dynamodb';
+import {
+  ConditionalCheckFailedException,
+  TransactionCanceledException,
+} from '@aws-sdk/client-dynamodb';
 import type { Invitation, Member, MemberScope, Role } from '@timeline/shared';
 import { ddb, tableName } from './dynamo-client';
 import { conflict } from '../http-error';
@@ -215,8 +218,14 @@ export async function createInvitation(invitation: Invitation): Promise<Invitati
       }),
     );
     return invitation;
-  } catch {
-    throw conflict('Invitation already exists');
+  } catch (err) {
+    // Only a genuine key collision is a conflict. Catching everything here
+    // reported unrelated failures as "already invited", which hid the real
+    // cause and made the bug much harder to find.
+    if (err instanceof ConditionalCheckFailedException) {
+      throw conflict('Invitation already exists');
+    }
+    throw err;
   }
 }
 

@@ -138,7 +138,7 @@ export const es: TranslationShape = {
       title: 'Crea tu cuenta',
       email: 'Correo electrónico',
       username: 'Nombre de usuario',
-      usernameHint: 'Minúsculas y números, hasta {{max}} caracteres',
+      usernameHint: 'Minúsculas, números, - y _ — hasta {{max}} caracteres',
       displayName: 'Nombre para mostrar',
       password: 'Contraseña',
       submit: 'Crear cuenta',
@@ -165,7 +165,7 @@ export const es: TranslationShape = {
     errors: {
       invalidEmail: 'Ingresa un correo válido',
       passwordMin: 'La contraseña debe tener al menos 8 caracteres',
-      usernameInvalid: 'Solo minúsculas y números',
+      usernameInvalid: 'Usa minúsculas, números, - o _',
       usernameTooShort: 'Al menos {{min}} caracteres',
       displayNameRequired: 'Ingresa un nombre',
       codeInvalid: 'Ingresa el código de 6 dígitos',

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GrantableRole, MemberScope } from '@timeline/shared';
+import { LIMITS } from '@timeline/shared';
 import { Button } from '../../components/ui/Button';
 import { SelectField, TextField } from '../../components/ui/fields';
 import { ApiError } from '../../lib/api-client';
@@ -21,8 +22,12 @@ interface CollaboratorsPanelProps {
   canManage: boolean;
 }
 
+/** Must mirror `usernameSchema`'s charset, or existing users can't be typed in. */
 function sanitizeUsername(raw: string): string {
-  return raw.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15);
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, LIMITS.USERNAME_MAX);
 }
 
 export function CollaboratorsPanel({ scope, resourceId, canManage }: CollaboratorsPanelProps) {

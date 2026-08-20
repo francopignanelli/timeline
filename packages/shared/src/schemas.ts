@@ -27,11 +27,20 @@ export const partialDateSchema = z.object({
 export const timeUnitSchema = z.enum(TIME_UNITS);
 export const localeSchema = z.enum(LOCALES);
 
+/**
+ * Lowercase letters, digits, underscore and hyphen.
+ *
+ * Separators are allowed deliberately: tightening this to `[a-z0-9]` made
+ * already-registered usernames like `franco_dev` unrepresentable, so nobody
+ * could search for or invite them — the input stripped the separator and the
+ * lookup missed. Any charset here must stay a superset of what existing
+ * accounts already hold.
+ */
 export const usernameSchema = z
   .string()
   .min(LIMITS.USERNAME_MIN)
   .max(LIMITS.USERNAME_MAX)
-  .regex(/^[a-z0-9]+$/, { message: 'Lowercase letters and digits only' });
+  .regex(/^[a-z0-9_-]+$/, { message: 'Lowercase letters, digits, - and _' });
 
 const titleSchema = z.string().trim().min(1).max(LIMITS.TITLE_MAX);
 
@@ -188,11 +197,13 @@ export const publicMediaUrlsSchema = z.object({
 });
 
 export const userSearchSchema = z.object({
+  // Must accept the same charset as usernameSchema, or existing accounts
+  // become unsearchable.
   q: z
     .string()
     .min(LIMITS.USER_SEARCH_MIN_CHARS)
     .max(LIMITS.USERNAME_MAX)
-    .regex(/^[a-z0-9]+$/, { message: 'Lowercase letters and digits only' }),
+    .regex(/^[a-z0-9_-]+$/, { message: 'Lowercase letters, digits, - and _' }),
 });
 
 const milestoneBaseSchema = z.object({
