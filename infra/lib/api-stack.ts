@@ -119,6 +119,33 @@ export class ApiStack extends Stack {
     const cfnStage = httpApi.defaultStage!.node.defaultChild as apigwv2.CfnStage;
     cfnStage.defaultRouteSettings = { throttlingRateLimit: 20, throttlingBurstLimit: 50 };
 
+    /*
+     * Access logs: method, route and status for every request. Added because
+     * 4xx responses never reach the Lambda's own logs, which left failures
+     * that were rejected at the gateway (or returned as a clean 4xx) with no
+     * server-side trace at all — impossible to diagnose from the outside.
+     *
+     * Deliberately excludes request bodies and headers: no tokens, no user
+     * content (SECURITY.md). 7-day retention like the function's log group.
+     */
+    const accessLogGroup = new logs.LogGroup(this, 'ApiAccessLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+    cfnStage.accessLogSettings = {
+      destinationArn: accessLogGroup.logGroupArn,
+      format: JSON.stringify({
+        requestId: '$context.requestId',
+        method: '$context.httpMethod',
+        path: '$context.path',
+        routeKey: '$context.routeKey',
+        status: '$context.status',
+        integrationStatus: '$context.integrationStatus',
+        integrationError: '$context.integrationErrorMessage',
+        authorizerError: '$context.authorizer.error',
+      }),
+    };
+
     const authorizer = new HttpJwtAuthorizer(
       'CognitoAuthorizer',
       `https://cognito-idp.${this.region}.amazonaws.com/${props.userPool.userPoolId}`,

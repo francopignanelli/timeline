@@ -37,8 +37,7 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
   const updateRole = useUpdateMemberRole(scope, resourceId);
   const remove = useRemoveMember(scope, resourceId);
 
-  const onInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onInvite = async () => {
     setError(undefined);
     setSentTo(null);
     if (username.length < 3) {
@@ -65,8 +64,15 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
 
   return (
     <div className="flex flex-col gap-5">
+      {/*
+        Deliberately NOT a <form>. This panel is mounted inside the milestone
+        editor's form, and nested forms are invalid HTML — the browser gave the
+        Invite button to the *outer* form, so clicking it saved the milestone
+        and never sent the invite. A plain button keeps the panel safe to embed
+        anywhere.
+      */}
       {canManage && (
-        <form onSubmit={onInvite} className="flex flex-col gap-3" noValidate>
+        <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[12rem] flex-1">
               <UsernameAutocomplete
@@ -74,6 +80,7 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
                 label={t('collab.inviteLabel')}
                 value={username}
                 onChange={setUsername}
+                onSubmit={() => void onInvite()}
               />
             </div>
             <div className="w-40">
@@ -87,7 +94,7 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
                 <option value="VIEWER">{t('collab.roles.VIEWER')}</option>
               </SelectField>
             </div>
-            <Button type="submit" disabled={invite.isPending}>
+            <Button type="button" onClick={() => void onInvite()} disabled={invite.isPending}>
               {invite.isPending ? t('common.loading') : t('collab.invite')}
             </Button>
           </div>
@@ -115,7 +122,7 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
               {t('collab.inviteSent', { username: sentTo })}
             </p>
           )}
-        </form>
+        </div>
       )}
 
       <div className="flex flex-col">

@@ -10,6 +10,8 @@ interface UsernameAutocompleteProps {
   label: string;
   value: string;
   onChange: (username: string) => void;
+  /** Enter submits. There is no surrounding <form> to do it — see CollaboratorsPanel. */
+  onSubmit?: () => void;
   error?: string;
 }
 
@@ -32,6 +34,7 @@ export function UsernameAutocomplete({
   label,
   value,
   onChange,
+  onSubmit,
   error,
 }: UsernameAutocompleteProps) {
   const { t } = useTranslation();
@@ -87,6 +90,14 @@ export function UsernameAutocomplete({
           onFocus={() => setOpen(true)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setOpen(false);
+            if (e.key === 'Enter') {
+              // Stop the keypress reaching any enclosing form, which would
+              // submit *that* instead (the milestone editor, for example).
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(false);
+              onSubmit?.();
+            }
           }}
           className={inputClasses}
         />
