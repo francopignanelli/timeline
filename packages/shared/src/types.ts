@@ -28,6 +28,14 @@ export interface UserProfile {
   bio?: string;
   location?: string;
   website?: string;
+  /**
+   * S3 object key of the avatar, never a URL — the bucket is private, so a
+   * short-lived presigned URL is minted per view (SECURITY.md).
+   *
+   * Note there is no `email` here on purpose: it lives in Cognito and is read
+   * from the ID token, so this record never becomes a second copy of it.
+   */
+  avatarKey?: string;
   locale: Locale;
   createdAt: string; // ISO 8601 datetime (system timestamp)
 }

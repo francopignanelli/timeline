@@ -1,6 +1,7 @@
 import { LIMITS, usernameSchema } from '@timeline/shared';
 import type { UpdateProfileInput, UserProfile } from '@timeline/shared';
 import * as repo from '../../repositories/users-repo';
+import { HttpError } from '../../http-error';
 
 interface CognitoAttrs {
   username?: string;
@@ -35,6 +36,11 @@ export async function getOrCreateProfile(userId: string, attrs: CognitoAttrs): P
 }
 
 export function updateProfile(userId: string, patch: UpdateProfileInput): Promise<UserProfile> {
+  // The schema pins the key's *shape*; only this check pins its *owner*.
+  // Without it a caller could point their avatar at somebody else's object.
+  if (patch.avatarKey && !patch.avatarKey.startsWith(`u/${userId}/`)) {
+    throw new HttpError(400, 'INVALID_AVATAR_KEY', 'Avatar must be your own upload');
+  }
   return repo.updateUserProfile(userId, patch);
 }
 

@@ -6,7 +6,9 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../features/auth/auth-provider';
 import { useProfile } from '../features/profile/hooks';
-import { initials } from '../lib/initials';
+import { useAvatarUrl } from '../features/profile/useAvatarUrl';
+import { NotificationsButton } from '../features/sharing/NotificationsButton';
+import { Avatar } from '../components/ui/Avatar';
 import { RouteFallback } from './RouteFallback';
 
 export function AppLayout() {
@@ -17,6 +19,7 @@ export function AppLayout() {
   // truth, so prefer its displayName over the Cognito one once loaded.
   const { data: profile } = useProfile();
   const displayName = profile?.displayName ?? user?.displayName ?? '';
+  const { data: avatarUrl } = useAvatarUrl(profile?.avatarKey);
 
   return (
     <div className="flex h-screen flex-col bg-bg">
@@ -26,14 +29,15 @@ export function AppLayout() {
         </Link>
         <div className="flex items-center gap-2 md:gap-4">
           <LanguageSwitcher />
+          <NotificationsButton />
           {displayName && (
             <Link
               to="/profile"
               aria-label={t('profile.title')}
               title={displayName}
-              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-medium text-text-secondary transition-colors hover:border-accent hover:text-text"
+              className="rounded-full transition-opacity hover:opacity-80"
             >
-              {initials(displayName)}
+              <Avatar displayName={displayName} url={avatarUrl} />
             </Link>
           )}
           <Button variant="tertiary" className="px-2 md:px-4" onClick={() => void logout()}>

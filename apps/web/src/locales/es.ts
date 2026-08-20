@@ -96,8 +96,22 @@ export const es: TranslationShape = {
       body: 'Puede haber sido revocado, o la línea de tiempo ya no se comparte.',
     },
   },
+  notifications: {
+    label: 'Notificaciones',
+    labelWithCount_one: 'Notificaciones, {{count}} pendiente',
+    labelWithCount_other: 'Notificaciones, {{count}} pendientes',
+    title: 'Notificaciones',
+    empty: 'Nada nuevo por ahora.',
+  },
   profile: {
     title: 'Perfil',
+    email: 'Correo electrónico',
+    emailImmutable: 'Tu dirección de inicio de sesión. Contacta a soporte para cambiarla.',
+    avatar: {
+      change: 'Cambiar foto',
+      remove: 'Quitar',
+      uploading: 'Subiendo…',
+    },
     displayName: 'Nombre para mostrar',
     bio: 'Biografía',
     location: 'Ubicación',

@@ -229,6 +229,10 @@ export const updateProfileSchema = z.object({
       }),
     ])
     .optional(),
+  // Empty string clears the avatar, for the same reason as `website` above.
+  // Ownership of the key is checked server-side — the shape alone doesn't
+  // prove the key belongs to the caller.
+  avatarKey: z.union([z.literal(''), s3KeySchema]).optional(),
   locale: localeSchema,
 });
 

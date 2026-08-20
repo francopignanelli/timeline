@@ -88,8 +88,22 @@ export const en = {
       body: 'It may have been revoked, or the timeline is no longer shared.',
     },
   },
+  notifications: {
+    label: 'Notifications',
+    labelWithCount_one: 'Notifications, {{count}} pending',
+    labelWithCount_other: 'Notifications, {{count}} pending',
+    title: 'Notifications',
+    empty: 'Nothing new right now.',
+  },
   profile: {
     title: 'Profile',
+    email: 'Email',
+    emailImmutable: 'Your sign-in address. Contact support to change it.',
+    avatar: {
+      change: 'Change picture',
+      remove: 'Remove',
+      uploading: 'Uploading…',
+    },
     displayName: 'Display name',
     bio: 'Bio',
     location: 'Location',

@@ -11,6 +11,11 @@
 - Verified live: `/public/*` reachable anonymously (404 not 401), all other routes still 401, revocation immediate, and the payload contains no owner subject, no `s3Key`, no raw keys.
 - Cost: **$0** — no new AWS services; the anonymous surface is the only new cost vector and carries its own throttle.
 
+### Follow-ups on top of Phase 8
+- **Notifications button** in the header (bell + unread count) listing pending invitations with inline accept/decline, reachable from every page. Replaces the dashboard-only banner. The panel is the intended home for mention notifications once a consumer exists (DECISIONS #37).
+- **Profile**: email is shown read-only, read from the **Cognito ID token** rather than stored on the profile record — one source of truth, and no second copy of a personal identifier in our table. Avatar upload reuses the existing S3 pipeline (`avatarKey` on the profile; MIME allowlist and 5 MB cap already enforced server-side), with an added ownership check that the key sits under the caller's own prefix.
+- **Known limitation**: avatars render only for *your own* account (header + profile). Presigning checks the key belongs to the caller, so collaborator lists stay on initials. Showing other people's avatars needs a separate, deliberately-scoped endpoint like the public-media one — not a widening of the existing check.
+
 ## Earlier phases
 **Phase 7 (hardening) complete, plus a user-requested feature round.** All seven planned phases are now done and the MVP surface is feature-complete. Phase 7 delivered:
 
