@@ -9,9 +9,16 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION ?? 'us-east-1',
 };
 
-// Local dev is always allowed; the hosted frontend origin(s) are added here
-// once a deploy target exists (e.g. after creating the Netlify site).
-const corsOrigins = ['http://localhost:5173'];
+/*
+ * Exact origins allowed to call the API and to PUT to the media bucket.
+ * Deliberately an explicit allowlist, not a wildcard: these endpoints carry a
+ * user's JWT, so any origin listed here can act as that user (SECURITY.md).
+ *
+ * Netlify deploy previews (deploy-preview-N--timelinez.netlify.app) are NOT
+ * included — each has a distinct origin, and allowing the pattern would mean
+ * trusting every branch build.
+ */
+const corsOrigins = ['http://localhost:5173', 'https://timelinez.netlify.app'];
 
 const authStack = new AuthStack(app, 'TimelineDevAuth', { env });
 new ApiStack(app, 'TimelineDevApi', {
