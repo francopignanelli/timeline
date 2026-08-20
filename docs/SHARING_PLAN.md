@@ -1,6 +1,8 @@
 # Timeline — Sharing, Collaboration & Mentions (design review)
 
-**Status**: design only — nothing here is built. Written 2026-08-19 after Phases 0–7.
+**Status**: ✅ **built and deployed** (2026-08-19). Written as a design review after
+Phases 0–7, then implemented; the design below matches what shipped. Deviations
+and things deliberately left out are listed in §7.
 Scope: public links, collaborator roles, and `@username` mentions.
 
 This reviews what already supports these features, what has to change, and the
@@ -313,6 +315,35 @@ twice.
 ---
 
 ## 6. Open decisions (need a call before implementation)
+
+## 7. What shipped vs. this design
+
+Built as designed, with these notes:
+
+- **A real leak was found while testing the public path.** `batchGetMilestones`/
+  `batchGetStages` returned raw DynamoDB items, so `GSI1PK` (`USER#<ownerId>`)
+  and the internal keys rode along into every content response. On the
+  authenticated path that only reached people who already had access; the public
+  endpoint would have handed an anonymous visitor the owner's identifier. Keys
+  are now stripped at the data layer, and public media is addressed by **block
+  id** instead of object key (the key path embeds the owner id too). Covered by
+  a regression test asserting the owner's subject appears nowhere in the payload.
+- **Public throttling needed two CDK escape hatches**: per-route settings must
+  use raw CloudFormation property names (CDK does not rename inside a map of
+  complex types), and the stage needs an explicit dependency on the routes it
+  references or the update fails with a 404.
+- **User search needed a new index shape.** Prefix search is impossible on a
+  partition key and scans are forbidden by the project rules, so username claims
+  now carry `GSI1PK='USERNAME'` + `GSI1SK=<username>`. One hot partition, fine
+  at this size; shard the key if it ever isn't. Pre-existing claims were
+  backfilled.
+- **Not built** (deliberate): notifications of any kind — the mention data shape
+  supports them (§3) but no stream, consumer or delivery exists; mention
+  *autocomplete* (the `/users/search` endpoint is live and the invite field uses
+  it, but the milestone editor asks you to type the handle); accepting an
+  invitation from a public link.
+
+## 8. Resolved decisions
 
 All resolved by the user on 2026-08-19:
 

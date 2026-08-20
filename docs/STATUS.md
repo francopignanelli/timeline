@@ -3,6 +3,15 @@
 **Last updated**: 2026-08-19
 
 ## Current phase
+**Phase 8 (sharing, collaboration, mentions) complete** — built beyond the original 7-phase MVP at user request. Design review and full detail: **`docs/SHARING_PLAN.md`**; decisions in DECISIONS #35–37.
+- **Public links**: rotatable share token, a dedicated `/public/*` API Gateway route with **no JWT authorizer** and its own 5 rps throttle, and a read-only `/p/:shareToken` page. Visibility re-checked per request, so revoking kills a link instantly.
+- **Collaboration**: explicit two-scope membership (milestone or timeline) with OWNER/EDITOR/VIEWER resolved as capabilities. Authorization moved to a single choke point, `apps/api/src/modules/access/service.ts` — 12 unit tests cover it. In-app invitations only (no SES, no new cost).
+- **Mentions**: `@username` resolved to user ids at write time and stored structurally so notifications need no migration later. A mention grants no access, and the editor says so.
+- **Found and fixed a real PII leak while testing the public path**: `batchGet*` returned raw DynamoDB items, so `GSI1PK` (`USER#<ownerId>`) and `s3Key` (which embeds the owner id) rode along into content responses. Keys are now stripped at the data layer and public media is addressed by block id. Regression-tested.
+- Verified live: `/public/*` reachable anonymously (404 not 401), all other routes still 401, revocation immediate, and the payload contains no owner subject, no `s3Key`, no raw keys.
+- Cost: **$0** — no new AWS services; the anonymous surface is the only new cost vector and carries its own throttle.
+
+## Earlier phases
 **Phase 7 (hardening) complete, plus a user-requested feature round.** All seven planned phases are now done and the MVP surface is feature-complete. Phase 7 delivered:
 
 **Hardening**
