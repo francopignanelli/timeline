@@ -7,6 +7,8 @@ import {
   ENTITY_COLORS,
   IMAGE_MIME_TYPES,
   FILE_MIME_TYPES,
+  MEMBER_SCOPES,
+  GRANTABLE_ROLES,
 } from './constants';
 import { isValidDateString, comparePartialDates } from './partial-date';
 import { YOUTUBE_ID_RE } from './youtube';
@@ -64,8 +66,9 @@ const timelineBaseSchema = z.object({
   ongoing: z.boolean(),
   unit: timeUnitSchema,
   rulerVisible: z.boolean(),
-  // MVP accepts PRIVATE only; widened when sharing phases land.
-  visibility: z.literal('PRIVATE'),
+  // SHARED is derived (it means "has members"), never set directly — so the
+  // user-settable set is PRIVATE | UNLISTED | PUBLIC (DECISIONS #36).
+  visibility: z.enum(['PRIVATE', 'UNLISTED', 'PUBLIC']),
 });
 
 export const createTimelineSchema = timelineBaseSchema.superRefine(checkTemporalRange);
@@ -147,6 +150,51 @@ export const viewUrlsSchema = z.object({
   keys: z.array(s3KeySchema).max(LIMITS.BLOCKS_PER_MILESTONE_MAX),
 });
 
+// ---------------------------------------------------------------------------
+// Collaboration
+// ---------------------------------------------------------------------------
+
+export const memberScopeSchema = z.enum(MEMBER_SCOPES);
+export const grantableRoleSchema = z.enum(GRANTABLE_ROLES);
+
+/**
+ * Invitations are addressed by **username**, never by userId: the server
+ * resolves it through AP2, so a client can't invite an arbitrary subject
+ * (SECURITY.md — identity is never client-supplied).
+ */
+export const createInvitationSchema = z.object({
+  username: usernameSchema,
+  role: grantableRoleSchema,
+});
+
+export const updateMemberRoleSchema = z.object({
+  role: grantableRoleSchema,
+});
+
+/** Share tokens are URL-safe, 22+ chars of entropy, and never user-supplied. */
+export const shareTokenSchema = z
+  .string()
+  .min(22)
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/, { message: 'Invalid share token' });
+
+export const setVisibilitySchema = z.object({
+  visibility: z.enum(['PRIVATE', 'UNLISTED', 'PUBLIC']),
+});
+
+/** Public media is addressed by block id — object keys never cross the boundary. */
+export const publicMediaUrlsSchema = z.object({
+  blockIds: z.array(z.string().min(1).max(64)).max(LIMITS.BLOCKS_PER_MILESTONE_MAX),
+});
+
+export const userSearchSchema = z.object({
+  q: z
+    .string()
+    .min(LIMITS.USER_SEARCH_MIN_CHARS)
+    .max(LIMITS.USERNAME_MAX)
+    .regex(/^[a-z0-9]+$/, { message: 'Lowercase letters and digits only' }),
+});
+
 const milestoneBaseSchema = z.object({
   title: titleSchema,
   date: partialDateSchema,
@@ -221,3 +269,6 @@ export type LinkStageInput = z.infer<typeof linkStageSchema>;
 export type UpdateMilestoneLinkInput = z.infer<typeof updateMilestoneLinkSchema>;
 export type UpdateStageLinkInput = z.infer<typeof updateStageLinkSchema>;
 export type PresignUploadInput = z.infer<typeof presignUploadSchema>;
+export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+export type SetVisibilityInput = z.infer<typeof setVisibilitySchema>;

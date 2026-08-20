@@ -161,23 +161,25 @@ which *also* appears in two of my private timelines — may Ana edit its text?
 If yes, Ana silently changes content inside timelines she cannot see. That is a
 real integrity and privacy leak, not a hypothetical.
 
-Three candidate rules:
+### ✋ Resolved (user decision, 2026-08-19): explicit two-scope membership
 
-- **(A) Timeline-scoped edit** — an editor may edit any entity reachable from a
-  timeline they can edit. Most convenient, **leaks across timelines**. Not
-  recommended.
-- **(B) Ownership required for content** — editors may create, link, unlink and
-  restyle, but editing an existing entity's *content* requires owning it. Safest,
-  most restrictive; collaborators can't fix a typo in your milestone.
-- **(C) Edit if unshared** — editors may edit content when the entity is linked
-  to exactly **one** timeline (checked via AP10 at write time). Safe by
-  construction, and covers the common case where a milestone belongs to one
-  timeline anyway. Slightly surprising when it flips to read-only after being
-  linked elsewhere.
+Rather than *inferring* whether an editor may touch a shared entity, permission
+is **granted explicitly at one of two scopes**:
 
-**Recommendation: (C), falling back to (B)'s refusal** when the entity is shared.
-It preserves the entity model and never leaks across timelines. It costs one AP10
-query on entity writes by a non-owner.
+- **Milestone-scoped collaborator** → edit rights on *that milestone only*.
+- **Timeline-scoped collaborator** → edit rights across the whole timeline:
+  its meta, its stages, and the milestones linked to it.
+
+This resolves the ambiguity by making the grant intentional instead of derived.
+The cross-timeline exposure noted above is then handled by **informed consent**,
+not by restriction: before an invitation is sent, the UI must state the scope
+plainly — and, when inviting at timeline scope, must disclose **how many of that
+timeline's milestones also appear in other timelines** (computable via AP10), so
+the owner knows exactly what they are widening access to.
+
+Both scopes were pre-committed: DATA_MODEL.md's deferred patterns read
+"timeline/**milestone** members", and PRODUCT.md's backlog lists milestone
+sharing and timeline sharing as separate items.
 
 ### Authorization refactor
 
@@ -312,9 +314,11 @@ twice.
 
 ## 6. Open decisions (need a call before implementation)
 
-| # | Decision | Default if unanswered |
+All resolved by the user on 2026-08-19:
+
+| # | Decision | Resolution |
 |---|---|---|
-| D1 | Shared-entity edit rule for EDITORs — (A) / (B) / (C) above | **(C)** edit only when unshared |
-| D2 | Invitations: in-app only, or email to non-users (SES) | **In-app only** — no new service, no new cost |
-| D3 | `/users/search` scope: everyone, or only people you already share a timeline with | **Everyone**, prefix ≥2, capped |
-| D4 | Do public timelines serve **images/files**, or text-only | **Yes, with the key-allowlist rule in §1** |
+| D1 | Shared-entity edit rule | ✋ **Explicit two-scope membership** (milestone-scoped or timeline-scoped), with a scope warning before every invite — see §2 |
+| D2 | Invitations reach people how? | ✋ **In-app only** — invitee must already have an account. No SES, no new service, no new cost |
+| D3 | `/users/search` scope | ✋ **Anyone**, authenticated, prefix ≥2 chars, capped ~5, returns username + displayName only |
+| D4 | Public timelines serve media? | ✋ **Yes**, under the key-allowlist rule in §1 |

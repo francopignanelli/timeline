@@ -1,6 +1,6 @@
 import { DeleteCommand, GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { ulid } from 'ulid';
-import type { CreateMilestoneInput, Milestone, UpdateMilestoneInput } from '@timeline/shared';
+import type { CreateMilestoneInput, Mention, Milestone, UpdateMilestoneInput } from '@timeline/shared';
 import { ddb, tableName } from './dynamo-client';
 
 interface MilestoneItem extends Milestone {
@@ -38,10 +38,11 @@ export async function getMilestone(id: string): Promise<Milestone | null> {
 export async function createMilestone(
   ownerId: string,
   input: CreateMilestoneInput,
+  mentions: Mention[] = [],
 ): Promise<Milestone> {
   const id = ulid();
   const now = new Date().toISOString();
-  const milestone: Milestone = { id, ownerId, ...input, createdAt: now, updatedAt: now };
+  const milestone: Milestone = { id, ownerId, ...input, mentions, createdAt: now, updatedAt: now };
   await ddb.send(
     new PutCommand({
       TableName: tableName(),
@@ -57,8 +58,13 @@ export async function createMilestone(
   return milestone;
 }
 
-export async function updateMilestone(id: string, patch: UpdateMilestoneInput): Promise<Milestone> {
+export async function updateMilestone(
+  id: string,
+  patch: UpdateMilestoneInput,
+  mentions?: Mention[],
+): Promise<Milestone> {
   const fields: Record<string, unknown> = { ...patch, updatedAt: new Date().toISOString() };
+  if (mentions) fields.mentions = mentions;
   const names: Record<string, string> = {};
   const values: Record<string, unknown> = {};
   const sets = Object.entries(fields).map(([key, value], i) => {

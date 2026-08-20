@@ -9,7 +9,7 @@ import type {
   UpdateStageLinkInput,
 } from '@timeline/shared';
 import * as linksRepo from '../../repositories/links-repo';
-import * as timelinesService from './service';
+import * as access from '../access/service';
 import * as milestonesService from '../milestones/service';
 import * as stagesService from '../stages/service';
 
@@ -18,9 +18,9 @@ export interface TimelineContent {
   stages: { ref: TimelineStageRef; stage: Stage }[];
 }
 
-/** AP5 + AP6: the full canvas payload for one Timeline. */
-export async function getTimelineContent(ownerId: string, timelineId: string): Promise<TimelineContent> {
-  await timelinesService.getOwnTimeline(ownerId, timelineId);
+/** AP5 + AP6: the full canvas payload for one Timeline. Readable by any viewer. */
+export async function getTimelineContent(userId: string, timelineId: string): Promise<TimelineContent> {
+  await access.requireTimeline(userId, timelineId, 'VIEW');
   const { milestoneRefs, stageRefs } = await linksRepo.listTimelineLinks(timelineId);
   const [milestoneById, stageById] = await Promise.all([
     linksRepo.batchGetMilestones(milestoneRefs.map((r) => r.milestoneId)),
@@ -44,7 +44,7 @@ export async function linkMilestoneToTimeline(
   timelineId: string,
   input: LinkMilestoneInput,
 ): Promise<{ ref: TimelineMilestoneRef; milestone: Milestone }> {
-  await timelinesService.getOwnTimeline(ownerId, timelineId);
+  await access.requireTimeline(ownerId, timelineId, 'EDIT');
 
   const milestone =
     'milestone' in input
@@ -61,7 +61,7 @@ export async function linkStageToTimeline(
   timelineId: string,
   input: LinkStageInput,
 ): Promise<{ ref: TimelineStageRef; stage: Stage }> {
-  await timelinesService.getOwnTimeline(ownerId, timelineId);
+  await access.requireTimeline(ownerId, timelineId, 'EDIT');
 
   const stage =
     'stage' in input
@@ -77,7 +77,7 @@ export async function unlinkMilestoneFromTimeline(
   timelineId: string,
   milestoneId: string,
 ): Promise<void> {
-  await timelinesService.getOwnTimeline(ownerId, timelineId);
+  await access.requireTimeline(ownerId, timelineId, 'EDIT');
   await linksRepo.unlinkMilestone(timelineId, milestoneId);
 }
 
@@ -86,7 +86,7 @@ export async function unlinkStageFromTimeline(
   timelineId: string,
   stageId: string,
 ): Promise<void> {
-  await timelinesService.getOwnTimeline(ownerId, timelineId);
+  await access.requireTimeline(ownerId, timelineId, 'EDIT');
   await linksRepo.unlinkStage(timelineId, stageId);
 }
 
@@ -96,7 +96,7 @@ export async function updateMilestoneLink(
   milestoneId: string,
   patch: UpdateMilestoneLinkInput,
 ): Promise<TimelineMilestoneRef> {
-  await timelinesService.getOwnTimeline(ownerId, timelineId);
+  await access.requireTimeline(ownerId, timelineId, 'EDIT');
   return linksRepo.updateMilestoneLink(timelineId, milestoneId, patch);
 }
 
@@ -106,6 +106,6 @@ export async function updateStageLink(
   stageId: string,
   patch: UpdateStageLinkInput,
 ): Promise<TimelineStageRef> {
-  await timelinesService.getOwnTimeline(ownerId, timelineId);
+  await access.requireTimeline(ownerId, timelineId, 'EDIT');
   return linksRepo.updateStageLink(timelineId, stageId, patch);
 }

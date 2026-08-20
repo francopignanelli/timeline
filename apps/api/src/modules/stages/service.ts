@@ -4,16 +4,14 @@ import type { CreateStageInput, Stage, UpdateStageInput } from '@timeline/shared
 import * as repo from '../../repositories/stages-repo';
 import * as linksRepo from '../../repositories/links-repo';
 import { ddb, tableName } from '../../repositories/dynamo-client';
-import { notFound } from '../../http-error';
+import * as access from '../access/service';
 
 export function listOwnStages(ownerId: string): Promise<Stage[]> {
   return repo.listStagesByOwner(ownerId);
 }
 
-export async function getOwnStage(ownerId: string, id: string): Promise<Stage> {
-  const stage = await repo.getStage(id);
-  if (!stage || stage.ownerId !== ownerId) throw notFound();
-  return stage;
+export function getOwnStage(userId: string, id: string): Promise<Stage> {
+  return access.requireStage(userId, id, 'VIEW');
 }
 
 export function createStage(ownerId: string, input: CreateStageInput): Promise<Stage> {
@@ -21,11 +19,11 @@ export function createStage(ownerId: string, input: CreateStageInput): Promise<S
 }
 
 export async function updateOwnStage(
-  ownerId: string,
+  userId: string,
   id: string,
   patch: UpdateStageInput,
 ): Promise<Stage> {
-  const existing = await getOwnStage(ownerId, id);
+  const existing = await access.requireStage(userId, id, 'EDIT');
   // Cross-field range rules only see both sides once merged (DATA_MODEL.md).
   createStageSchema.parse({
     title: patch.title ?? existing.title,
@@ -42,8 +40,13 @@ export function countTimelineRefs(stageId: string): Promise<number> {
 }
 
 /** Deletes the Stage + all its Timeline links, transactionally (DATA_MODEL.md integrity rule). */
-export async function deleteOwnStage(ownerId: string, id: string): Promise<void> {
-  await getOwnStage(ownerId, id);
+/** Owner-only, mirroring milestones: editors may unlink, not destroy. */
+export async function deleteOwnStage(userId: string, id: string): Promise<void> {
+  const stage = await repo.getStage(id);
+  if (!stage || stage.ownerId !== userId) {
+    await access.requireStage(userId, id, 'MANAGE');
+    return;
+  }
   const refs = await linksRepo.listStageRefs(id);
   const transactItems = [
     { Delete: { TableName: tableName(), Key: { PK: `STAGE#${id}`, SK: 'META' } } },

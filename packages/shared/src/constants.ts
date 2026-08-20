@@ -10,6 +10,35 @@ export type Visibility = (typeof VISIBILITIES)[number];
 export const ROLES = ['OWNER', 'EDITOR', 'VIEWER'] as const;
 export type Role = (typeof ROLES)[number];
 
+/** Roles an owner may hand out. OWNER is never granted through an invitation. */
+export const GRANTABLE_ROLES = ['EDITOR', 'VIEWER'] as const;
+export type GrantableRole = (typeof GRANTABLE_ROLES)[number];
+
+/**
+ * Collaboration is granted explicitly at one of two scopes (DECISIONS #35):
+ * MILESTONE grants edit rights on that milestone alone; TIMELINE grants them
+ * across the timeline — its meta, stages, and every milestone linked to it.
+ */
+export const MEMBER_SCOPES = ['TIMELINE', 'MILESTONE'] as const;
+export type MemberScope = (typeof MEMBER_SCOPES)[number];
+
+export const INVITATION_STATUSES = ['PENDING', 'ACCEPTED', 'DECLINED'] as const;
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
+
+/** What a role may do. Checked as a capability, never by comparing role strings. */
+export const CAPABILITIES = ['VIEW', 'EDIT', 'MANAGE'] as const;
+export type Capability = (typeof CAPABILITIES)[number];
+
+const ROLE_CAPABILITIES: Record<Role, readonly Capability[]> = {
+  OWNER: ['VIEW', 'EDIT', 'MANAGE'],
+  EDITOR: ['VIEW', 'EDIT'],
+  VIEWER: ['VIEW'],
+};
+
+export function roleAllows(role: Role, capability: Capability): boolean {
+  return ROLE_CAPABILITIES[role].includes(capability);
+}
+
 export const LOCALES = ['en', 'es'] as const;
 export type Locale = (typeof LOCALES)[number];
 
@@ -78,4 +107,10 @@ export const LIMITS = {
   IMAGE_MAX_BYTES: 5 * 1024 * 1024,
   FILE_MAX_BYTES: 10 * 1024 * 1024,
   FILE_NAME_MAX: 200,
+  // Collaboration + mentions
+  MEMBERS_PER_RESOURCE_MAX: 50,
+  MENTIONS_PER_MILESTONE_MAX: 20,
+  USER_SEARCH_MIN_CHARS: 2,
+  USER_SEARCH_LIMIT: 5,
+  INVITATION_TTL_DAYS: 14,
 } as const;

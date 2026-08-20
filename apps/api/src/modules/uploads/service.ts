@@ -84,6 +84,26 @@ export async function presignViewUrls(
   return Object.fromEntries(entries);
 }
 
+/**
+ * Presigns keys for anonymous viewers. Deliberately takes **no** userId: the
+ * caller (the public route) is responsible for having already intersected the
+ * keys with what the shared timeline actually references. This function must
+ * never be reachable with a caller-supplied key list.
+ */
+export async function presignPublicViewUrls(keys: string[]): Promise<Record<string, string>> {
+  const entries = await Promise.all(
+    keys.map(async (key) => {
+      const url = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: bucket(), Key: key }),
+        { expiresIn: VIEW_URL_TTL_SECONDS },
+      );
+      return [key, url] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
 export async function deleteObject(userId: string, key: string): Promise<void> {
   assertOwnsKey(userId, key);
   await s3.send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));

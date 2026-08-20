@@ -73,9 +73,14 @@ describe('createTimelineSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects non-PRIVATE visibility in MVP', () => {
-    const result = createTimelineSchema.safeParse({ ...validTimeline, visibility: 'PUBLIC' });
-    expect(result.success).toBe(false);
+  it('accepts the user-settable visibilities but not the derived one', () => {
+    for (const visibility of ['PRIVATE', 'UNLISTED', 'PUBLIC'] as const) {
+      expect(createTimelineSchema.safeParse({ ...validTimeline, visibility }).success).toBe(true);
+    }
+    // SHARED means "has members" — it is derived, never set directly.
+    expect(createTimelineSchema.safeParse({ ...validTimeline, visibility: 'SHARED' }).success).toBe(
+      false,
+    );
   });
 
   it('rejects empty and oversized titles', () => {

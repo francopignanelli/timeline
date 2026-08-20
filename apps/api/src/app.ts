@@ -8,6 +8,9 @@ import { timelinesRoutes } from './modules/timelines/routes';
 import { milestonesRoutes } from './modules/milestones/routes';
 import { stagesRoutes } from './modules/stages/routes';
 import { uploadsRoutes } from './modules/uploads/routes';
+import { membersRoutes } from './modules/members/routes';
+import { sharingRoutes } from './modules/sharing/routes';
+import { publicRoutes } from './modules/public/routes';
 
 export const app = new Hono();
 
@@ -20,11 +23,17 @@ app.use(
   }),
 );
 
+// `/public/*` is served through a separate API Gateway route that carries no
+// JWT authorizer; every other route below is reachable only with a valid token.
+app.route('/', publicRoutes);
+
 app.route('/', usersRoutes);
 app.route('/', timelinesRoutes);
 app.route('/', milestonesRoutes);
 app.route('/', stagesRoutes);
 app.route('/', uploadsRoutes);
+app.route('/', membersRoutes);
+app.route('/', sharingRoutes);
 
 // Errors: { error: { code, message } } (API.md). Stack traces stay server-side (SECURITY.md).
 app.onError((err, c) => {

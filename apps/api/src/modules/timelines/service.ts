@@ -1,21 +1,31 @@
 import { createTimelineSchema } from '@timeline/shared';
 import type { CreateTimelineInput, Timeline, UpdateTimelineInput } from '@timeline/shared';
 import * as repo from '../../repositories/timelines-repo';
-import { notFound } from '../../http-error';
+import * as membersRepo from '../../repositories/members-repo';
+import * as access from '../access/service';
 
 /**
- * MVP authorization rule (SECURITY.md): strict ownership. 404 for "exists but
- * not yours" — never leak resource existence to a non-owner.
+ * Authorization lives in `modules/access/service.ts` — every function here
+ * resolves through it, so ownership and membership are decided in one place
+ * (404 for anything the caller may not reach; never 403).
  */
 
-export function listOwnTimelines(ownerId: string): Promise<Timeline[]> {
-  return repo.listTimelinesByOwner(ownerId);
+/** Timelines the caller owns, plus the ones shared with them (AP3 ∪ AP12). */
+export async function listAccessibleTimelines(userId: string): Promise<Timeline[]> {
+  const [owned, memberships] = await Promise.all([
+    repo.listTimelinesByOwner(userId),
+    membersRepo.listMembershipsForUser(userId, 'TIMELINE'),
+  ]);
+
+  const ownedIds = new Set(owned.map((t) => t.id));
+  const sharedIds = memberships.map((m) => m.resourceId).filter((id) => !ownedIds.has(id));
+  const shared = await repo.batchGetTimelines(sharedIds);
+
+  return [...owned, ...shared.values()];
 }
 
-export async function getOwnTimeline(ownerId: string, id: string): Promise<Timeline> {
-  const timeline = await repo.getTimeline(id);
-  if (!timeline || timeline.ownerId !== ownerId) throw notFound();
-  return timeline;
+export function getOwnTimeline(userId: string, id: string): Promise<Timeline> {
+  return access.requireTimeline(userId, id, 'VIEW');
 }
 
 export function createTimeline(ownerId: string, input: CreateTimelineInput): Promise<Timeline> {
@@ -23,11 +33,11 @@ export function createTimeline(ownerId: string, input: CreateTimelineInput): Pro
 }
 
 export async function updateOwnTimeline(
-  ownerId: string,
+  userId: string,
   id: string,
   patch: UpdateTimelineInput,
 ): Promise<Timeline> {
-  const existing = await getOwnTimeline(ownerId, id);
+  const existing = await access.requireTimeline(userId, id, 'EDIT');
   // Cross-field range rules only see both sides once merged (DATA_MODEL.md).
   createTimelineSchema.parse({
     title: patch.title ?? existing.title,
@@ -39,10 +49,15 @@ export async function updateOwnTimeline(
     rulerVisible: patch.rulerVisible ?? existing.rulerVisible,
     visibility: patch.visibility ?? existing.visibility,
   });
-  return repo.updateTimeline(id, patch);
+  // Visibility is not settable through a general PATCH — it flows through the
+  // dedicated share endpoints so the token lifecycle stays in one place.
+  const { visibility: _ignored, ...safePatch } = patch;
+  return repo.updateTimeline(id, safePatch);
 }
 
-export async function deleteOwnTimeline(ownerId: string, id: string): Promise<void> {
-  await getOwnTimeline(ownerId, id);
+/** Deleting a timeline is an owner-only act, not an editor one. */
+export async function deleteOwnTimeline(userId: string, id: string): Promise<void> {
+  const timeline = await access.requireTimeline(userId, id, 'MANAGE');
+  if (timeline.shareToken) await repo.deleteShareToken(timeline.shareToken);
   await repo.deleteTimeline(id);
 }

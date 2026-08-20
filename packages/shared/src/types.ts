@@ -6,6 +6,9 @@ import type {
   EntityColor,
   ImageMimeType,
   FileMimeType,
+  Role,
+  MemberScope,
+  InvitationStatus,
 } from './constants';
 
 /**
@@ -40,8 +43,55 @@ export interface Timeline {
   unit: TimeUnit;
   rulerVisible: boolean;
   visibility: Visibility;
+  /**
+   * Unguessable public-link token, minted when visibility leaves PRIVATE.
+   * Deliberately separate from `id`: ULIDs are timestamp-prefixed and not
+   * secret, and a token can be rotated to revoke a leaked link without
+   * changing the timeline's identity (DECISIONS #36).
+   */
+  shareToken?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A collaborator on a Timeline or a single Milestone (DECISIONS #35). */
+export interface Member {
+  scope: MemberScope;
+  resourceId: string;
+  userId: string;
+  /** Denormalized for display; username is immutable so it cannot drift. */
+  username: string;
+  displayName: string;
+  role: Role;
+  addedAt: string;
+  addedBy: string;
+}
+
+export interface Invitation {
+  id: string;
+  scope: MemberScope;
+  resourceId: string;
+  /** Denormalized so the invitee can see what they're being invited to. */
+  resourceTitle: string;
+  inviteeId: string;
+  inviterId: string;
+  inviterName: string;
+  role: Role;
+  status: InvitationStatus;
+  createdAt: string;
+  expiresAt: string;
+}
+
+/**
+ * What an owner is about to widen access to. Shown before a timeline-scoped
+ * invite is sent, so the cross-timeline exposure is disclosed rather than
+ * discovered (DECISIONS #35).
+ */
+export interface ShareImpact {
+  milestoneCount: number;
+  stageCount: number;
+  /** Milestones on this timeline that also appear in other timelines. */
+  sharedMilestoneCount: number;
 }
 
 interface BlockBase {
@@ -92,12 +142,23 @@ export interface FileBlock extends UploadBlockBase {
 /** Discriminated on `type`; future media blocks (AUDIO/LINK) join this union. */
 export type ContentBlock = TextBlock | YouTubeBlock | ImageBlock | FileBlock;
 
+/**
+ * A resolved `@username` reference. Resolved once at write time rather than
+ * parsed at render: that keeps a stable `userId` (what a future notification
+ * consumer needs) and avoids a username lookup per render (DECISIONS #37).
+ */
+export interface Mention {
+  userId: string;
+  username: string;
+}
+
 export interface Milestone {
   id: string;
   ownerId: string;
   title: string;
   date: PartialDate;
   blocks: ContentBlock[];
+  mentions?: Mention[];
   createdAt: string;
   updatedAt: string;
 }
@@ -139,3 +200,28 @@ export interface TimelineStageRef {
   color?: EntityColor;
   addedAt: string;
 }
+
+/**
+ * What an anonymous visitor is allowed to see. A deliberate DTO, not the raw
+ * item: `ownerId` and every other identifier is stripped so a public link
+ * cannot be used to enumerate users (SECURITY.md).
+ */
+export type PublicTimeline = Omit<Timeline, 'ownerId' | 'shareToken'>;
+
+/**
+ * Media blocks drop `s3Key` on the way out: the key path embeds the owner's
+ * user id. Anonymous viewers reference media by **block id** instead, which
+ * the server maps back to a key it has already allowlisted.
+ */
+export type PublicContentBlock =
+  | TextBlock
+  | YouTubeBlock
+  | Omit<ImageBlock, 's3Key'>
+  | Omit<FileBlock, 's3Key'>;
+
+export type PublicMilestone = Omit<Milestone, 'ownerId' | 'mentions' | 'blocks'> & {
+  blocks: PublicContentBlock[];
+  /** Usernames only — no user ids leak to anonymous visitors. */
+  mentions?: { username: string }[];
+};
+export type PublicStage = Omit<Stage, 'ownerId'>;

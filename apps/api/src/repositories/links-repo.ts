@@ -54,6 +54,17 @@ export async function listTimelineLinks(
   };
 }
 
+/**
+ * Strips the internal key attributes before an item leaves the data layer.
+ * Without this the raw `PK`/`SK`/`GSI1PK`/`GSI1SK` ride along into API
+ * responses — and `GSI1PK` is `USER#<ownerId>`, which on the public read path
+ * would hand an anonymous visitor the owner's identifier.
+ */
+function stripKeys<T>(item: Record<string, unknown>): T {
+  const { PK: _p, SK: _s, GSI1PK: _g1, GSI1SK: _g2, ...rest } = item;
+  return rest as T;
+}
+
 /** AP6: resolve the bodies referenced by a set of refs. */
 export async function batchGetMilestones(ids: string[]): Promise<Map<string, Milestone>> {
   if (ids.length === 0) return new Map();
@@ -64,7 +75,7 @@ export async function batchGetMilestones(ids: string[]): Promise<Map<string, Mil
       },
     }),
   );
-  const items = (res.Responses?.[tableName()] ?? []) as Milestone[];
+  const items = (res.Responses?.[tableName()] ?? []).map((i) => stripKeys<Milestone>(i));
   return new Map(items.map((m) => [m.id, m]));
 }
 
@@ -75,7 +86,7 @@ export async function batchGetStages(ids: string[]): Promise<Map<string, Stage>>
       RequestItems: { [tableName()]: { Keys: ids.map((id) => ({ PK: `STAGE#${id}`, SK: 'META' })) } },
     }),
   );
-  const items = (res.Responses?.[tableName()] ?? []) as Stage[];
+  const items = (res.Responses?.[tableName()] ?? []).map((i) => stripKeys<Stage>(i));
   return new Map(items.map((s) => [s.id, s]));
 }
 

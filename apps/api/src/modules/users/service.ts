@@ -37,3 +37,14 @@ export async function getOrCreateProfile(userId: string, attrs: CognitoAttrs): P
 export function updateProfile(userId: string, patch: UpdateProfileInput): Promise<UserProfile> {
   return repo.updateUserProfile(userId, patch);
 }
+
+/** Public shape of a user in search results — no email, no id (DECISIONS #37). */
+export interface UserSearchResult {
+  username: string;
+  displayName: string;
+}
+
+export async function searchUsers(prefix: string): Promise<UserSearchResult[]> {
+  const matches = await repo.searchUsernamesByPrefix(prefix, LIMITS.USER_SEARCH_LIMIT);
+  return matches.map((u) => ({ username: u.username, displayName: u.displayName }));
+}

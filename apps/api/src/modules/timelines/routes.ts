@@ -14,7 +14,7 @@ import * as contentService from './content-service';
 export const timelinesRoutes = new Hono();
 
 timelinesRoutes.get('/timelines', async (c) => {
-  const timelines = await service.listOwnTimelines(getUserId(c));
+  const timelines = await service.listAccessibleTimelines(getUserId(c));
   return c.json(timelines);
 });
 

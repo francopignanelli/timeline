@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Milestone, Timeline } from '@timeline/shared';
 
-const timelinesServiceMocks = vi.hoisted(() => ({ getOwnTimeline: vi.fn() }));
-vi.mock('./service', () => timelinesServiceMocks);
+const accessMocks = vi.hoisted(() => ({ requireTimeline: vi.fn(), requireMilestone: vi.fn() }));
+vi.mock('../access/service', () => accessMocks);
 
 const milestonesServiceMocks = vi.hoisted(() => ({
   getOwnMilestone: vi.fn(),
@@ -43,7 +43,7 @@ describe('linking a milestone the caller owns their timeline', () => {
   });
 
   it('links an existing milestone the caller also owns', async () => {
-    timelinesServiceMocks.getOwnTimeline.mockResolvedValue(timeline);
+    accessMocks.requireTimeline.mockResolvedValue(timeline);
     const milestone: Milestone = {
       id: 'm1',
       ownerId: OWNER,
@@ -70,7 +70,7 @@ describe('linking a milestone the caller owns their timeline', () => {
   });
 
   it('refuses to link a milestone owned by someone else (404 from the ownership check)', async () => {
-    timelinesServiceMocks.getOwnTimeline.mockResolvedValue(timeline);
+    accessMocks.requireTimeline.mockResolvedValue(timeline);
     milestonesServiceMocks.getOwnMilestone.mockRejectedValue(
       Object.assign(new Error('not found'), { status: 404 }),
     );
@@ -82,7 +82,7 @@ describe('linking a milestone the caller owns their timeline', () => {
   });
 
   it('refuses to link into a timeline the caller does not own', async () => {
-    timelinesServiceMocks.getOwnTimeline.mockRejectedValue(
+    accessMocks.requireTimeline.mockRejectedValue(
       Object.assign(new Error('not found'), { status: 404 }),
     );
 

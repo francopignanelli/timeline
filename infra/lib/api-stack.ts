@@ -125,6 +125,36 @@ export class ApiStack extends Stack {
       { jwtAudience: [props.userPoolClientId] },
     );
 
+    /*
+     * The only unauthenticated surface (DECISIONS #36). Kept on its own path
+     * prefix so "is this endpoint public?" is answerable from the route table
+     * rather than from handler logic, and restricted to the two verbs the
+     * public read path actually uses.
+     */
+    const publicApiRoutes = httpApi.addRoutes({
+      path: '/public/{proxy+}',
+      methods: [apigwv2.HttpMethod.GET, apigwv2.HttpMethod.POST],
+      integration: new HttpLambdaIntegration('PublicApiIntegration', fn),
+      // No authorizer: anonymous by design.
+    });
+
+    /*
+     * Anonymous traffic is the app's main abuse/cost vector, so the public
+     * routes get their own, tighter ceiling on top of the default above.
+     *
+     * Two escape hatches are needed here. `addPropertyOverride` because CDK
+     * does not apply its camelCase → PascalCase renaming inside a map of
+     * complex types; and an explicit dependency because per-route settings
+     * reference routes by key, so the stage update fails with a 404 unless
+     * the routes are created first.
+     */
+    const publicThrottle = { ThrottlingRateLimit: 5, ThrottlingBurstLimit: 10 };
+    cfnStage.addPropertyOverride('RouteSettings', {
+      'GET /public/{proxy+}': publicThrottle,
+      'POST /public/{proxy+}': publicThrottle,
+    });
+    for (const route of publicApiRoutes) cfnStage.node.addDependency(route);
+
     httpApi.addRoutes({
       path: '/{proxy+}',
       // Explicit method list (not HttpMethod.ANY) so OPTIONS preflight stays
