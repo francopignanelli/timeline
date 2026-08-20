@@ -69,8 +69,19 @@ export function MilestoneModal({
   // additionally holds freshly uploaded ones while editing, so previews work.
   const { data: viewUrls } = useViewUrls(blocks, milestone !== null);
 
+  /*
+   * Seed only when a *different* milestone is opened — see the same guard in
+   * StagePopover (DECISIONS #38). Without it a background refetch re-runs this
+   * and discards in-progress edits, including freshly uploaded blocks.
+   */
+  const loadedIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (milestone) {
+    if (!milestone) {
+      loadedIdRef.current = null;
+      return;
+    }
+    if (loadedIdRef.current !== milestone.id) {
+      loadedIdRef.current = milestone.id;
       setEditing(false);
       setConfirmingDelete(false);
       setTitle(milestone.title);

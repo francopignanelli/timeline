@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EntityColor, PartialDate, Stage, TimelineStageRef } from '@timeline/shared';
 import { Button } from '../../components/ui/Button';
@@ -35,18 +35,30 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
   const del = useDeleteStage();
   const { data: refCount } = useStageReferenceCount(confirmingDelete ? (stage?.id ?? null) : null);
 
+  /*
+   * Seed the form only when a *different* stage is opened. `stage` comes from
+   * a React Query result, so any refetch hands back a new object with the same
+   * contents — keying off identity alone would re-run this mid-edit and snap
+   * every field back to the saved values (DECISIONS #38).
+   */
+  const loadedIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (stage) {
-      setEditing(false);
-      setConfirmingDelete(false);
-      setTitle(stage.title);
-      setDescription(stage.description ?? '');
-      setStart(stage.start);
-      setOngoing(stage.ongoing);
-      setEnd(stage.end ?? null);
-      setColor(stageRef?.color ?? 'DEFAULT');
-      setError(undefined);
+    if (!stage) {
+      loadedIdRef.current = null;
+      return;
     }
+    if (loadedIdRef.current === stage.id) return;
+    loadedIdRef.current = stage.id;
+
+    setEditing(false);
+    setConfirmingDelete(false);
+    setTitle(stage.title);
+    setDescription(stage.description ?? '');
+    setStart(stage.start);
+    setOngoing(stage.ongoing);
+    setEnd(stage.end ?? null);
+    setColor(stageRef?.color ?? 'DEFAULT');
+    setError(undefined);
   }, [stage, stageRef]);
 
   if (!stage) return null;
