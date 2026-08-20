@@ -1,7 +1,30 @@
-import type { EntityColor, Timeline } from '@timeline/shared';
-import type { TimelineContent } from '../../lib/timeline-content-api';
+import type {
+  EntityColor,
+  Milestone,
+  Stage,
+  Timeline,
+  TimelineMilestoneRef,
+  TimelineStageRef,
+} from '@timeline/shared';
 import { formatPartialDate } from '../../lib/format-date';
 import { partialDateToDayNumber } from './domain/day-number';
+
+/**
+ * The canvas only needs what it draws — so it takes the structural minimum
+ * rather than the full entity. That lets the authenticated payload and the
+ * PII-stripped public one (which has no `ownerId` and no `s3Key`) feed the
+ * exact same renderer.
+ */
+export interface CanvasContent {
+  milestones: {
+    ref: TimelineMilestoneRef;
+    milestone: Pick<Milestone, 'id' | 'title' | 'date'>;
+  }[];
+  stages: {
+    ref: TimelineStageRef;
+    stage: Pick<Stage, 'id' | 'title' | 'start' | 'end' | 'ongoing'>;
+  }[];
+}
 
 /** Presentation-ready canvas items: domain entities flattened to day numbers. */
 
@@ -34,7 +57,7 @@ export interface CanvasItems {
 
 export function buildCanvasItems(
   timeline: Timeline,
-  content: TimelineContent,
+  content: CanvasContent,
   today: number,
   locale: string,
   presentLabel: string,

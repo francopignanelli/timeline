@@ -18,6 +18,8 @@ import {
   uploadFile,
 } from '../../lib/uploads-api';
 import { useViewUrls } from './useViewUrls';
+import { MentionText } from './MentionText';
+import { CollaboratorsPanel } from '../sharing/CollaboratorsPanel';
 import { Button } from '../../components/ui/Button';
 import { ColorPicker } from '../../components/ui/ColorPicker';
 import { Dialog } from '../../components/ui/Dialog';
@@ -383,6 +385,8 @@ export function MilestoneModal({
             />
           </div>
 
+          <p className="text-xs text-text-muted">{t('milestone.edit.mentionHint')}</p>
+
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="mt-1 flex justify-end gap-3">
             <Button variant="tertiary" onClick={() => setEditing(false)}>
@@ -391,6 +395,12 @@ export function MilestoneModal({
             <Button type="submit" disabled={update.isPending || updateLink.isPending}>
               {update.isPending || updateLink.isPending ? t('common.loading') : t('common.save')}
             </Button>
+          </div>
+
+          {/* Milestone-scoped collaboration: rights on this milestone alone. */}
+          <div className="mt-2 border-t border-border pt-5">
+            <h3 className="mb-3 font-serif text-lg text-text">{t('collab.milestoneSection')}</h3>
+            <CollaboratorsPanel scope="MILESTONE" resourceId={milestone.id} canManage />
           </div>
         </form>
       ) : (
@@ -401,9 +411,7 @@ export function MilestoneModal({
 
           {sortedBlocks.map((block) =>
             block.type === 'TEXT' ? (
-              <p key={block.id} className="whitespace-pre-wrap text-base text-text-secondary">
-                {block.text}
-              </p>
+              <MentionText key={block.id} text={block.text} mentions={milestone.mentions} />
             ) : block.type === 'IMAGE' ? (
               <figure key={block.id} className="flex flex-col gap-1.5">
                 {viewUrls?.[block.s3Key] ? (

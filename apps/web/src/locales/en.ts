@@ -24,6 +24,70 @@ export const en = {
     GREEN: 'Green',
     SLATE: 'Slate',
   },
+  share: {
+    title: 'Share',
+    tab: { people: 'People', link: 'Public link' },
+    visibility: 'Who can see this timeline',
+    visibilities: {
+      PRIVATE: { label: 'Private', hint: 'Only you and people you invite.' },
+      UNLISTED: { label: 'Unlisted', hint: 'Anyone with the link can view it. Not discoverable.' },
+      PUBLIC: { label: 'Public', hint: 'Anyone with the link can view it.' },
+      SHARED: { label: 'Shared', hint: 'Shared with specific people.' },
+    },
+    linkLabel: 'Public link',
+    copy: 'Copy',
+    copied: 'Copied',
+    revoke: 'Revoke this link',
+    revokeHint: 'Revoking replaces the link. Anyone still holding the old one loses access immediately.',
+    privateHint: 'This timeline is private. Choose Unlisted or Public to create a shareable link.',
+  },
+  collab: {
+    invitations: 'Invitations',
+    invitedTo: {
+      TIMELINE: '{{inviter}} invited you to collaborate on “{{title}}” as {{role}}.',
+      MILESTONE: '{{inviter}} invited you to collaborate on the milestone “{{title}}” as {{role}}.',
+    },
+    accept: 'Accept',
+    decline: 'Decline',
+    inviteLabel: 'Invite by username',
+    usernamePlaceholder: 'username',
+    invite: 'Invite',
+    role: 'Role',
+    roles: { OWNER: 'Owner', EDITOR: 'Editor', VIEWER: 'Viewer' },
+    whoHasAccess: 'Who has access',
+    noCollaborators: 'No collaborators yet.',
+    pending: 'Pending invitations',
+    revoke: 'Revoke',
+    remove: 'Remove',
+    milestoneSection: 'Collaborators on this milestone',
+    scopeWarning: {
+      TIMELINE: {
+        title: 'This grants access to the whole timeline',
+        body: 'An editor can add, edit and remove milestones and stages on this timeline, and change its details. They cannot manage sharing or delete it.',
+        sharedMilestones_one:
+          'Heads up: {{count}} milestone here also appears in another timeline, so edits will show up there too.',
+        sharedMilestones_other:
+          'Heads up: {{count}} milestones here also appear in other timelines, so edits will show up there too.',
+      },
+      MILESTONE: {
+        title: 'This grants access to one milestone',
+        body: 'An editor can edit this milestone only — its title, date and content. They get no access to the timelines it appears on.',
+      },
+    },
+    errors: {
+      userNotFound: 'No user with that username.',
+      alreadyInvited: 'That person already has access or a pending invitation.',
+      usernameTooShort: 'Enter at least 3 characters.',
+    },
+  },
+  public: {
+    signIn: 'Sign in',
+    readOnly: 'Read-only',
+    notFound: {
+      title: 'This link is not available',
+      body: 'It may have been revoked, or the timeline is no longer shared.',
+    },
+  },
   profile: {
     title: 'Profile',
     displayName: 'Display name',
@@ -180,6 +244,7 @@ export const en = {
       videoUrl: 'YouTube link',
       videoHint: 'Paste any YouTube link — watch, share, shorts or embed.',
       videoCaption: 'Caption (optional)',
+      mentionHint: 'Type @username in any text block to mention someone. Mentions do not grant access — invite them if they should see this.',
     },
     errors: {
       videoInvalid: "That doesn't look like a YouTube video link.",

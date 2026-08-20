@@ -27,6 +27,75 @@ export const es: TranslationShape = {
     GREEN: 'Verde',
     SLATE: 'Pizarra',
   },
+  share: {
+    title: 'Compartir',
+    tab: { people: 'Personas', link: 'Enlace público' },
+    visibility: 'Quién puede ver esta línea de tiempo',
+    visibilities: {
+      PRIVATE: { label: 'Privada', hint: 'Solo tú y las personas que invites.' },
+      UNLISTED: {
+        label: 'No listada',
+        hint: 'Cualquiera con el enlace puede verla. No aparece en búsquedas.',
+      },
+      PUBLIC: { label: 'Pública', hint: 'Cualquiera con el enlace puede verla.' },
+      SHARED: { label: 'Compartida', hint: 'Compartida con personas específicas.' },
+    },
+    linkLabel: 'Enlace público',
+    copy: 'Copiar',
+    copied: 'Copiado',
+    revoke: 'Revocar este enlace',
+    revokeHint:
+      'Al revocar se reemplaza el enlace. Quien conserve el anterior pierde el acceso de inmediato.',
+    privateHint:
+      'Esta línea de tiempo es privada. Elige No listada o Pública para crear un enlace.',
+  },
+  collab: {
+    invitations: 'Invitaciones',
+    invitedTo: {
+      TIMELINE: '{{inviter}} te invitó a colaborar en «{{title}}» como {{role}}.',
+      MILESTONE: '{{inviter}} te invitó a colaborar en el hito «{{title}}» como {{role}}.',
+    },
+    accept: 'Aceptar',
+    decline: 'Rechazar',
+    inviteLabel: 'Invitar por nombre de usuario',
+    usernamePlaceholder: 'usuario',
+    invite: 'Invitar',
+    role: 'Rol',
+    roles: { OWNER: 'Propietario', EDITOR: 'Editor', VIEWER: 'Lector' },
+    whoHasAccess: 'Quién tiene acceso',
+    noCollaborators: 'Aún no hay colaboradores.',
+    pending: 'Invitaciones pendientes',
+    revoke: 'Revocar',
+    remove: 'Quitar',
+    milestoneSection: 'Colaboradores en este hito',
+    scopeWarning: {
+      TIMELINE: {
+        title: 'Esto da acceso a toda la línea de tiempo',
+        body: 'Un editor puede agregar, editar y quitar hitos y etapas de esta línea de tiempo, y cambiar sus datos. No puede gestionar el uso compartido ni eliminarla.',
+        sharedMilestones_one:
+          'Atención: {{count}} hito de aquí también aparece en otra línea de tiempo, así que los cambios se verán allí también.',
+        sharedMilestones_other:
+          'Atención: {{count}} hitos de aquí también aparecen en otras líneas de tiempo, así que los cambios se verán allí también.',
+      },
+      MILESTONE: {
+        title: 'Esto da acceso a un solo hito',
+        body: 'Un editor puede editar únicamente este hito: su título, fecha y contenido. No obtiene acceso a las líneas de tiempo donde aparece.',
+      },
+    },
+    errors: {
+      userNotFound: 'No existe un usuario con ese nombre.',
+      alreadyInvited: 'Esa persona ya tiene acceso o una invitación pendiente.',
+      usernameTooShort: 'Ingresa al menos 3 caracteres.',
+    },
+  },
+  public: {
+    signIn: 'Iniciar sesión',
+    readOnly: 'Solo lectura',
+    notFound: {
+      title: 'Este enlace no está disponible',
+      body: 'Puede haber sido revocado, o la línea de tiempo ya no se comparte.',
+    },
+  },
   profile: {
     title: 'Perfil',
     displayName: 'Nombre para mostrar',
@@ -183,6 +252,8 @@ export const es: TranslationShape = {
       videoUrl: 'Enlace de YouTube',
       videoHint: 'Pega cualquier enlace de YouTube: watch, share, shorts o embed.',
       videoCaption: 'Descripción (opcional)',
+      mentionHint:
+        'Escribe @usuario en cualquier bloque de texto para mencionar a alguien. Las menciones no dan acceso: invítalo si debe ver esto.',
     },
     errors: {
       videoInvalid: 'Eso no parece un enlace de video de YouTube.',

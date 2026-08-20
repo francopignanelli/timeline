@@ -6,6 +6,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { formatRangeCompact } from '../../lib/format-date';
 import { useTimelines } from './hooks';
 import { CreateTimelineDialog } from './CreateTimelineDialog';
+import { InvitationsBanner } from '../sharing/InvitationsBanner';
 
 function greetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours();
@@ -23,9 +24,11 @@ export function DashboardPage() {
     <div className="mx-auto w-full max-w-3xl px-6 py-12 md:py-16">
       <p className="font-serif text-4xl text-text">{t(`dashboard.greeting.${greetingKey()}`)}</p>
 
-      <h2 className="mb-2 mt-14 text-sm font-medium text-text-muted">
-        {t('dashboard.yourTimelines')}
-      </h2>
+      <div className="mt-14">
+        <InvitationsBanner />
+      </div>
+
+      <h2 className="mb-2 text-sm font-medium text-text-muted">{t('dashboard.yourTimelines')}</h2>
 
       {isLoading && (
         <div className="flex flex-col" aria-label={t('common.loading')}>

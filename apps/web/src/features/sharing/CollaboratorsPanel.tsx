@@ -1,0 +1,191 @@
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { GrantableRole, MemberScope } from '@timeline/shared';
+import { Button } from '../../components/ui/Button';
+import { SelectField, TextField } from '../../components/ui/fields';
+import { ApiError } from '../../lib/api-client';
+import {
+  useInviteMember,
+  useMembers,
+  useRemoveMember,
+  useResourceInvitations,
+  useRevokeInvitation,
+  useShareImpact,
+  useUpdateMemberRole,
+} from './hooks';
+
+interface CollaboratorsPanelProps {
+  scope: MemberScope;
+  resourceId: string;
+  /** Only a manager sees the invite controls; viewers still see who has access. */
+  canManage: boolean;
+}
+
+function sanitizeUsername(raw: string): string {
+  return raw.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 15);
+}
+
+export function CollaboratorsPanel({ scope, resourceId, canManage }: CollaboratorsPanelProps) {
+  const { t } = useTranslation();
+  const [username, setUsername] = useState('');
+  const [role, setRole] = useState<GrantableRole>('EDITOR');
+  const [error, setError] = useState<string>();
+
+  const members = useMembers(scope, resourceId, true);
+  const invitations = useResourceInvitations(scope, resourceId, canManage);
+  const impact = useShareImpact(resourceId, canManage && scope === 'TIMELINE');
+  const invite = useInviteMember(scope, resourceId);
+  const revoke = useRevokeInvitation(scope, resourceId);
+  const updateRole = useUpdateMemberRole(scope, resourceId);
+  const remove = useRemoveMember(scope, resourceId);
+
+  const onInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(undefined);
+    if (username.length < 3) {
+      setError(t('collab.errors.usernameTooShort'));
+      return;
+    }
+    try {
+      await invite.mutateAsync({ username, role });
+      setUsername('');
+    } catch (err) {
+      // 404 here means "no such user" — the only case worth distinguishing.
+      setError(
+        err instanceof ApiError && err.status === 404
+          ? t('collab.errors.userNotFound')
+          : err instanceof ApiError && err.status === 409
+            ? t('collab.errors.alreadyInvited')
+            : t('common.errorGeneric'),
+      );
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      {canManage && (
+        <form onSubmit={onInvite} className="flex flex-col gap-3" noValidate>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[12rem] flex-1">
+              <TextField
+                id={`invite-username-${scope}`}
+                label={t('collab.inviteLabel')}
+                placeholder={t('collab.usernamePlaceholder')}
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                value={username}
+                onChange={(e) => setUsername(sanitizeUsername(e.target.value))}
+              />
+            </div>
+            <div className="w-40">
+              <SelectField
+                id={`invite-role-${scope}`}
+                label={t('collab.role')}
+                value={role}
+                onChange={(e) => setRole(e.target.value as GrantableRole)}
+              >
+                <option value="EDITOR">{t('collab.roles.EDITOR')}</option>
+                <option value="VIEWER">{t('collab.roles.VIEWER')}</option>
+              </SelectField>
+            </div>
+            <Button type="submit" disabled={invite.isPending}>
+              {invite.isPending ? t('common.loading') : t('collab.invite')}
+            </Button>
+          </div>
+
+          {/*
+            The scope of the grant is stated before it is made — and for a
+            timeline-scoped invite, how far it reaches beyond this timeline
+            (DECISIONS #35).
+          */}
+          <div className="rounded-lg border border-border bg-surface px-3 py-2.5 text-xs text-text-secondary">
+            <p className="font-medium text-text">{t(`collab.scopeWarning.${scope}.title`)}</p>
+            <p className="mt-1">{t(`collab.scopeWarning.${scope}.body`)}</p>
+            {scope === 'TIMELINE' && impact.data && impact.data.sharedMilestoneCount > 0 && (
+              <p className="mt-1.5 text-danger">
+                {t('collab.scopeWarning.TIMELINE.sharedMilestones', {
+                  count: impact.data.sharedMilestoneCount,
+                })}
+              </p>
+            )}
+          </div>
+
+          {error && <p className="text-sm text-danger">{error}</p>}
+        </form>
+      )}
+
+      <div className="flex flex-col">
+        <h3 className="mb-2 text-sm font-medium text-text-muted">{t('collab.whoHasAccess')}</h3>
+
+        {members.isLoading && <p className="text-sm text-text-muted">{t('common.loading')}</p>}
+        {members.data?.length === 0 && (
+          <p className="text-sm text-text-muted">{t('collab.noCollaborators')}</p>
+        )}
+
+        {members.data?.map((member) => (
+          <div
+            key={member.userId}
+            className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="text-sm text-text">{member.displayName}</span>{' '}
+              <span className="font-mono text-xs text-text-muted">@{member.username}</span>
+            </span>
+            {canManage ? (
+              <span className="flex items-center gap-2">
+                <select
+                  aria-label={t('collab.role')}
+                  value={member.role === 'OWNER' ? 'EDITOR' : member.role}
+                  disabled={member.role === 'OWNER' || updateRole.isPending}
+                  onChange={(e) =>
+                    void updateRole.mutateAsync({
+                      userId: member.userId,
+                      role: e.target.value as GrantableRole,
+                    })
+                  }
+                  className="h-8 rounded-md border border-border bg-surface-elevated px-2 text-xs text-text"
+                >
+                  <option value="EDITOR">{t('collab.roles.EDITOR')}</option>
+                  <option value="VIEWER">{t('collab.roles.VIEWER')}</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => void remove.mutateAsync(member.userId)}
+                  className="text-xs text-text-muted hover:text-danger"
+                >
+                  {t('collab.remove')}
+                </button>
+              </span>
+            ) : (
+              <span className="text-xs text-text-muted">{t(`collab.roles.${member.role}`)}</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {canManage && invitations.data && invitations.data.length > 0 && (
+        <div className="flex flex-col">
+          <h3 className="mb-2 text-sm font-medium text-text-muted">{t('collab.pending')}</h3>
+          {invitations.data.map((invitation) => (
+            <div
+              key={invitation.id}
+              className="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0"
+            >
+              <span className="text-sm text-text-secondary">
+                {t(`collab.roles.${invitation.role}`)}
+              </span>
+              <button
+                type="button"
+                onClick={() => void revoke.mutateAsync(invitation.id)}
+                className="text-xs text-text-muted hover:text-danger"
+              >
+                {t('collab.revoke')}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

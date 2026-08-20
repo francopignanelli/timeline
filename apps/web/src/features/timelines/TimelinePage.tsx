@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
@@ -6,10 +7,12 @@ import { formatRangeCompact } from '../../lib/format-date';
 import { TimelineCanvas } from '../canvas/TimelineCanvas';
 import { MilestoneModal } from '../milestones/MilestoneModal';
 import { StagePopover } from '../stages/StagePopover';
+import { ShareDialog } from '../sharing/ShareDialog';
 import { useTimeline, useTimelineContent } from './hooks';
 
 export function TimelinePage() {
   const { t } = useTranslation();
+  const [shareOpen, setShareOpen] = useState(false);
   const { timelineId } = useParams<{ timelineId: string }>();
   const id = timelineId ?? '';
   const { data: timeline, isLoading: timelineLoading, isError: timelineError } = useTimeline(id);
@@ -100,6 +103,18 @@ export function TimelinePage() {
             <span className="font-mono text-sm text-text-muted">
               {formatRangeCompact(timeline.start, timeline.end, timeline.ongoing, t('common.present'))}
             </span>
+            {timeline.visibility !== 'PRIVATE' && (
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-text-muted">
+                {t(`share.visibilities.${timeline.visibility}.label`)}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className="ml-auto text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
+            >
+              {t('share.title')}
+            </button>
           </>
         ) : (
           <div className="h-7 w-48 animate-pulse rounded-md bg-surface" aria-label={t('common.loading')} />
@@ -130,6 +145,7 @@ export function TimelinePage() {
         stageRef={selectedStageEntry?.ref ?? null}
         onClose={closeStage}
       />
+      <ShareDialog timelineId={id} open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
 }

@@ -1,10 +1,11 @@
-import { lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import { Navigate, createBrowserRouter, useRouteError } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../features/auth/auth-provider';
 import { AuthLayout } from '../features/auth/AuthLayout';
 import { AppLayout } from './AppLayout';
+import { RouteFallback } from './RouteFallback';
 
 /**
  * Route-level code splitting: the canvas route pulls in the whole canvas
@@ -34,6 +35,9 @@ const TimelinePage = lazy(() =>
 );
 const ProfilePage = lazy(() =>
   import('../features/profile/ProfilePage').then((m) => ({ default: m.ProfilePage })),
+);
+const PublicTimelinePage = lazy(() =>
+  import('../features/public/PublicTimelinePage').then((m) => ({ default: m.PublicTimelinePage })),
 );
 
 function LoadingScreen() {
@@ -77,6 +81,17 @@ function RouteErrorPage() {
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace />, errorElement: <RouteErrorPage /> },
+  {
+    // Public share links. Outside every auth guard by design — a visitor with
+    // the link needs no account, and the page never offers a mutation.
+    path: '/p/:shareToken',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <PublicTimelinePage />
+      </Suspense>
+    ),
+    errorElement: <RouteErrorPage />,
+  },
   {
     element: <AuthLayout />,
     errorElement: <RouteErrorPage />,

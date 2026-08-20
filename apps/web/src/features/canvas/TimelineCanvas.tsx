@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Timeline } from '@timeline/shared';
-import type { TimelineContent } from '../../lib/timeline-content-api';
+import type { CanvasContent } from './canvas-items';
 import { useElementSize } from '../../hooks/useElementSize';
 import { measureTextWidth } from '../../lib/measure-text';
 import { buildCanvasItems } from './canvas-items';
@@ -20,10 +20,14 @@ import { AddStageDialog } from './AddStageDialog';
 
 interface TimelineCanvasProps {
   timeline: Timeline;
-  content: TimelineContent;
+  content: CanvasContent;
   selectedMilestoneId: string | null;
   onOpenMilestone: (milestoneId: string) => void;
   onOpenStage: (stageId: string) => void;
+  /** Public/visitor mode: pan and zoom stay, every mutation affordance goes. */
+  readOnly?: boolean;
+  /** Set on the public route so media resolves through the anonymous endpoint. */
+  publicShareToken?: string;
 }
 
 const KEY_PAN_PX = 120;
@@ -44,6 +48,7 @@ export function TimelineCanvas({
   selectedMilestoneId,
   onOpenMilestone,
   onOpenStage,
+  readOnly = false,
 }: TimelineCanvasProps) {
   const { t, i18n } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -240,12 +245,19 @@ export function TimelineCanvas({
       )}
 
       <div className="absolute right-4 top-4 flex gap-2">
-        <CanvasButton label={t('canvas.addMilestone.title')} onClick={() => setAddMilestoneOpen(true)}>
-          {t('canvas.addMilestone.short')}
-        </CanvasButton>
-        <CanvasButton label={t('canvas.addStage.title')} onClick={() => setAddStageOpen(true)}>
-          {t('canvas.addStage.short')}
-        </CanvasButton>
+        {!readOnly && (
+          <>
+            <CanvasButton
+              label={t('canvas.addMilestone.title')}
+              onClick={() => setAddMilestoneOpen(true)}
+            >
+              {t('canvas.addMilestone.short')}
+            </CanvasButton>
+            <CanvasButton label={t('canvas.addStage.title')} onClick={() => setAddStageOpen(true)}>
+              {t('canvas.addStage.short')}
+            </CanvasButton>
+          </>
+        )}
         <CanvasButton
           label={t('canvas.zoomOut')}
           onClick={() => scale && setScale(zoomAt(scale, width / 2, 1 / BUTTON_ZOOM_FACTOR))}
@@ -270,16 +282,20 @@ export function TimelineCanvas({
         </CanvasButton>
       </div>
 
-      <AddMilestoneDialog
-        timelineId={timeline.id}
-        open={addMilestoneOpen}
-        onClose={() => setAddMilestoneOpen(false)}
-      />
-      <AddStageDialog
-        timelineId={timeline.id}
-        open={addStageOpen}
-        onClose={() => setAddStageOpen(false)}
-      />
+      {!readOnly && (
+        <>
+          <AddMilestoneDialog
+            timelineId={timeline.id}
+            open={addMilestoneOpen}
+            onClose={() => setAddMilestoneOpen(false)}
+          />
+          <AddStageDialog
+            timelineId={timeline.id}
+            open={addStageOpen}
+            onClose={() => setAddStageOpen(false)}
+          />
+        </>
+      )}
     </div>
   );
 }
