@@ -1,6 +1,6 @@
 export const en = {
   common: {
-    appName: 'Timeline',
+    appName: 'Timelines',
     cancel: 'Cancel',
     create: 'Create',
     close: 'Close',
@@ -9,11 +9,14 @@ export const en = {
     logout: 'Log out',
     present: 'Present',
     language: 'Language',
+    theme: { toDark: 'Switch to dark mode', toLight: 'Switch to light mode' },
     errorGeneric: 'Something went wrong. Please try again.',
     edit: 'Edit',
     save: 'Save',
     delete: 'Delete',
     color: 'Color',
+    shortLabel: 'Short label',
+    shortLabelHint: 'Compact name shown on the timeline. If empty, the full name will be used.',
   },
   colors: {
     DEFAULT: 'Default',
@@ -53,13 +56,13 @@ export const en = {
     inviteLabel: 'Invite by username',
     usernamePlaceholder: 'username',
     invite: 'Invite',
-    inviteSent: 'Invitation sent to @{{username}}.',
     awaitingReply: 'Invited as {{role}} — waiting for a reply',
     role: 'Role',
     roles: { OWNER: 'Owner', EDITOR: 'Editor', VIEWER: 'Viewer' },
     whoHasAccess: 'Who has access',
     noCollaborators: 'No collaborators yet.',
     pending: 'Pending invitations',
+    statusBadge: { PENDING: 'Pending', ACCEPTED: 'Accepted', DECLINED: 'Declined' },
     revoke: 'Revoke',
     remove: 'Remove',
     milestoneSection: 'Collaborators on this milestone',
@@ -96,7 +99,6 @@ export const en = {
     },
   },
   library: {
-    title: 'My library',
     tab: { milestones: 'Milestones', stages: 'Stages' },
     mine: 'Mine',
     sharedWithMe: 'Shared with me',
@@ -134,7 +136,6 @@ export const en = {
     addFile: 'Attach file',
     moveUp: 'Move up',
     moveDown: 'Move down',
-    duplicate: 'Duplicate block',
     remove: 'Remove block',
     type: {
       TEXT: 'Text',
@@ -225,9 +226,19 @@ export const en = {
       confirmSubmit: 'Set new password',
       backToLogin: 'Back to sign in',
     },
+    changePassword: {
+      title: 'Change password',
+      current: 'Current password',
+      new: 'New password',
+      confirm: 'Confirm new password',
+      submit: 'Update password',
+      success: 'Password updated.',
+    },
     errors: {
       invalidEmail: 'Enter a valid email address',
       passwordMin: 'Password must be at least 8 characters',
+      passwordMismatch: 'Passwords don’t match',
+      incorrectCurrentPassword: 'That current password is incorrect.',
       usernameInvalid: 'Use lowercase letters, numbers, - or _',
       usernameTooShort: 'At least {{min}} characters',
       displayNameRequired: 'Enter a name',
@@ -241,11 +252,7 @@ export const en = {
     },
   },
   dashboard: {
-    greeting: {
-      morning: 'Good morning.',
-      afternoon: 'Good afternoon.',
-      evening: 'Good evening.',
-    },
+    title: 'Timelines',
     yourTimelines: 'Your timelines',
     newTimeline: 'New Timeline',
     empty: {
@@ -281,6 +288,11 @@ export const en = {
     canvasPlaceholder: 'The timeline canvas arrives in Phase 2.',
     backToDashboard: 'Back to dashboard',
     notFound: 'This timeline does not exist.',
+    delete: {
+      warning:
+        'Delete this timeline permanently? Its milestones and stages are not deleted — they are only unlinked, since they can be reused elsewhere. This cannot be undone.',
+      confirm: 'Delete timeline',
+    },
   },
   canvas: {
     label: 'Timeline canvas',
@@ -289,6 +301,7 @@ export const en = {
     fit: 'Fit',
     ruler: 'Ruler',
     empty: 'No milestones or stages yet.',
+    axisStart: 'Start',
     addMilestone: {
       title: 'Add milestone',
       short: '+ Milestone',
@@ -357,14 +370,21 @@ export const en = {
       YEAR: 'Year',
       APPROXIMATE: 'Approximate',
     },
-    day: 'Date',
+    day: 'Day',
     month: 'Month',
     quarter: 'Quarter',
     year: 'Year',
+    dayPlaceholder: 'DD',
+    monthPlaceholder: 'MM',
+    yearPlaceholder: 'YYYY',
   },
   notFound: {
     title: 'Page not found',
     back: 'Go to dashboard',
+  },
+  legal: {
+    termsLink: 'Terms and Conditions',
+    backToApp: 'Back to app',
   },
 } as const;
 

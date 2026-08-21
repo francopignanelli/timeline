@@ -1,18 +1,22 @@
 import { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
+import { Dialog } from '../../components/ui/Dialog';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { formatRangeCompact } from '../../lib/format-date';
 import { TimelineCanvas } from '../canvas/TimelineCanvas';
 import { MilestoneModal } from '../milestones/MilestoneModal';
 import { StagePopover } from '../stages/StagePopover';
 import { ShareDialog } from '../sharing/ShareDialog';
-import { useTimeline, useTimelineContent } from './hooks';
+import { useDeleteTimeline, useTimeline, useTimelineContent } from './hooks';
 
 export function TimelinePage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [shareOpen, setShareOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const del = useDeleteTimeline();
   const { timelineId } = useParams<{ timelineId: string }>();
   const id = timelineId ?? '';
   const { data: timeline, isLoading: timelineLoading, isError: timelineError } = useTimeline(id);
@@ -108,13 +112,22 @@ export function TimelinePage() {
                 {t(`share.visibilities.${timeline.visibility}.label`)}
               </span>
             )}
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              className="ml-auto text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
-            >
-              {t('share.title')}
-            </button>
+            <div className="ml-auto flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
+              >
+                {t('share.title')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                className="text-sm text-text-secondary underline-offset-4 hover:text-danger hover:underline"
+              >
+                {t('common.delete')}
+              </button>
+            </div>
           </>
         ) : (
           <div className="h-7 w-48 animate-pulse rounded-md bg-surface" aria-label={t('common.loading')} />
@@ -127,6 +140,7 @@ export function TimelinePage() {
             timeline={timeline}
             content={content}
             selectedMilestoneId={selectedMilestoneId}
+            selectedStageId={selectedStageId}
             onOpenMilestone={openMilestone}
             onOpenStage={openStage}
           />
@@ -146,6 +160,32 @@ export function TimelinePage() {
         onClose={closeStage}
       />
       <ShareDialog timelineId={id} open={shareOpen} onClose={() => setShareOpen(false)} />
+
+      <Dialog
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        title={t('timeline.delete.confirm')}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-text">{t('timeline.delete.warning')}</p>
+          <div className="flex justify-end gap-3">
+            <Button variant="tertiary" onClick={() => setConfirmingDelete(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="secondary"
+              className="border-danger text-danger hover:bg-danger/10"
+              disabled={del.isPending}
+              onClick={async () => {
+                await del.mutateAsync(id);
+                navigate('/dashboard');
+              }}
+            >
+              {t('timeline.delete.confirm')}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

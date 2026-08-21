@@ -1,3 +1,13 @@
+/**
+ * The single source of truth for the app's displayed version — shown next to
+ * the logo (LogoFull) and on the Terms page. Two-part, no patch number:
+ * bump the second number (1.0 → 1.1) for a small change, the first (1.x →
+ * 2.0) for a bigger one. There's no automated trigger for this — whoever
+ * ships a user-visible change updates it here, and mirrors it in
+ * docs/STATUS.md and the Terms page's "Version" line (DECISIONS #44).
+ */
+export const APP_VERSION = '1.0';
+
 export const DATE_PRECISIONS = ['DAY', 'MONTH', 'QUARTER', 'YEAR', 'APPROXIMATE'] as const;
 export type DatePrecision = (typeof DATE_PRECISIONS)[number];
 
@@ -100,6 +110,8 @@ export type EntityColor = (typeof ENTITY_COLORS)[number];
 
 export const LIMITS = {
   TITLE_MAX: 200,
+  /** Meant to stay compact on the canvas — much shorter than the full title. */
+  SHORT_LABEL_MAX: 40,
   DESCRIPTION_MAX: 2000,
   BIO_MAX: 2000,
   TEXT_BLOCK_MAX: 10_000,

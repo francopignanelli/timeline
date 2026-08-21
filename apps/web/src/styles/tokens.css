@@ -57,6 +57,36 @@
     --color-entity-slate: #4d5a68;
   }
 
+  /*
+   * Night mode: the same token names, dark values. Every surface/text/border
+   * color in the app already flows through `var(--color-*)` (Tailwind v4
+   * compiles `bg-bg` etc. to exactly that), so overriding them here is the
+   * entire theme switch — no per-component dark-mode classes anywhere else.
+   * `[data-theme="dark"]` outranks the plain `:root` block above regardless
+   * of source order (an attribute selector is more specific), and the toggle
+   * (src/lib/theme.ts) is what sets the attribute.
+   *
+   * Entity colors are left as-is: their muted-but-saturated hues already
+   * carry enough contrast against a dark ground without a second palette.
+   */
+  :root[data-theme='dark'] {
+    --color-bg: #171613;
+    --color-surface: #201e1a;
+    --color-surface-elevated: #29271f;
+
+    --color-text: #f2f0ea;
+    --color-text-secondary: #c9c5bb;
+    --color-text-muted: #8f8b80;
+
+    --color-border: #3a362c;
+    --color-timeline-line: #47432f;
+
+    --color-accent: #6f8dff;
+    --color-accent-hover: #8fa5ff;
+
+    --color-danger: #e0685c;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     :root {
       --motion-fast: 0ms;

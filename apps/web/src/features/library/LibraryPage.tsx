@@ -89,7 +89,9 @@ export function LibraryPage({ kind }: LibraryPageProps) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-12 md:py-16">
-      <h1 className="font-serif text-4xl text-text">{t('library.title')}</h1>
+      <h1 className="font-serif text-4xl text-text">
+        {t(isMilestone ? 'library.tab.milestones' : 'library.tab.stages')}
+      </h1>
 
       <div className="mt-6 flex gap-2 border-b border-border">
         {tab('/milestones', t('library.tab.milestones'))}

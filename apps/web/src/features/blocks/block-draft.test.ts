@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ContentBlock } from '@timeline/shared';
-import { duplicateBlock, moveBlock, moveBlockBefore, newBlock, resolveBlocks } from './block-draft';
+import { moveBlock, moveBlockBefore, newBlock, resolveBlocks } from './block-draft';
 
 const text = (id: string, order: number, body = ''): ContentBlock => ({
   id,
@@ -37,42 +37,6 @@ describe('moveBlockBefore', () => {
   it('drops the dragged block at the target position', () => {
     const blocks = [text('a', 0), text('b', 1), text('c', 2)];
     expect(moveBlockBefore(blocks, 'c', 'a').map((b) => b.id)).toEqual(['c', 'a', 'b']);
-  });
-});
-
-describe('duplicateBlock', () => {
-  it('inserts the copy directly below the original with a fresh id', () => {
-    const blocks = [text('a', 0, 'first'), text('b', 1, 'second')];
-    const result = duplicateBlock(blocks, {}, 'a', 'copy');
-    expect(result.blocks.map((b) => b.id)).toEqual(['a', 'copy', 'b']);
-    expect(result.blocks[1]).toMatchObject({ type: 'TEXT', text: 'first' });
-  });
-
-  it('copies the URL draft so a duplicated embed keeps its pasted link', () => {
-    const blocks: ContentBlock[] = [{ id: 'v', type: 'YOUTUBE', order: 0, youtubeId: '' }];
-    const result = duplicateBlock(blocks, { v: 'https://youtu.be/aaaaaaaaaaa' }, 'v', 'copy');
-    expect(result.urls.copy).toBe('https://youtu.be/aaaaaaaaaaa');
-  });
-
-  it('reuses the same object key rather than re-uploading', () => {
-    const blocks: ContentBlock[] = [
-      {
-        id: 'i',
-        type: 'IMAGE',
-        order: 0,
-        s3Key: 'u/user-1/abc.png',
-        fileName: 'abc.png',
-        size: 10,
-        contentType: 'image/png',
-      },
-    ];
-    const result = duplicateBlock(blocks, {}, 'i', 'copy');
-    expect(result.blocks[1]).toMatchObject({ id: 'copy', s3Key: 'u/user-1/abc.png' });
-  });
-
-  it('is a no-op for an unknown id', () => {
-    const blocks = [text('a', 0)];
-    expect(duplicateBlock(blocks, {}, 'nope').blocks).toEqual(blocks);
   });
 });
 

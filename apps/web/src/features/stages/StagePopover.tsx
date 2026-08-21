@@ -33,6 +33,7 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [title, setTitle] = useState('');
+  const [shortLabel, setShortLabel] = useState('');
   const [description, setDescription] = useState('');
   const [start, setStart] = useState<PartialDate | null>(null);
   const [ongoing, setOngoing] = useState(true);
@@ -67,6 +68,7 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
     setEditing(false);
     setConfirmingDelete(false);
     setTitle(stage.title);
+    setShortLabel(stage.shortLabel ?? '');
     setDescription(stage.description ?? '');
     setStart(stage.start);
     setOngoing(stage.ongoing);
@@ -99,6 +101,7 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
     try {
       await update.mutateAsync({
         title: title.trim(),
+        shortLabel: shortLabel.trim(),
         description: description.trim() || undefined,
         start,
         end: ongoing ? undefined : (end ?? undefined),
@@ -125,7 +128,7 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
   };
 
   return (
-    <Dialog open onClose={onClose} title={editing ? t('stage.edit.title') : stage.title}>
+    <Dialog open size="lg" onClose={onClose} title={editing ? t('stage.edit.title') : stage.title}>
       {confirmingDelete ? (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text">
@@ -154,6 +157,13 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
             label={t('canvas.addStage.stageTitle')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+          />
+          <TextField
+            id="stage-edit-short-label"
+            label={t('common.shortLabel')}
+            hint={t('common.shortLabelHint')}
+            value={shortLabel}
+            onChange={(e) => setShortLabel(e.target.value)}
           />
           <TextareaField
             id="stage-edit-description"

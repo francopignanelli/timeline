@@ -1,5 +1,11 @@
 import { TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
-import type { CreateMilestoneInput, Mention, Milestone, UpdateMilestoneInput } from '@timeline/shared';
+import type {
+  ContentBlock,
+  CreateMilestoneInput,
+  Mention,
+  Milestone,
+  UpdateMilestoneInput,
+} from '@timeline/shared';
 import { extractMentionsFromBlocks } from '@timeline/shared';
 import * as repo from '../../repositories/milestones-repo';
 import * as linksRepo from '../../repositories/links-repo';
@@ -7,6 +13,11 @@ import * as membersRepo from '../../repositories/members-repo';
 import * as usersRepo from '../../repositories/users-repo';
 import { ddb, tableName } from '../../repositories/dynamo-client';
 import * as access from '../access/service';
+import { deleteObjects } from '../uploads/service';
+
+function s3KeysOf(blocks: ContentBlock[]): string[] {
+  return blocks.flatMap((block) => ('s3Key' in block ? [block.s3Key] : []));
+}
 
 export function listOwnMilestones(ownerId: string): Promise<Milestone[]> {
   return repo.listMilestonesByOwner(ownerId);
@@ -53,11 +64,22 @@ export async function updateOwnMilestone(
   id: string,
   patch: UpdateMilestoneInput,
 ): Promise<Milestone> {
-  await access.requireMilestone(userId, id, 'EDIT');
+  const existing = await access.requireMilestone(userId, id, 'EDIT');
   // Mentions are derived from block text, so they're re-resolved whenever
   // blocks change rather than trusted from the client.
   const mentions = patch.blocks ? await resolveMentions(patch.blocks) : undefined;
-  return repo.updateMilestone(id, patch, mentions);
+  const updated = await repo.updateMilestone(id, patch, mentions);
+
+  // A block the user removed (or replaced) leaves its upload behind unless
+  // something explicitly deletes it — nothing else in the data model ever
+  // will, since no other block can reference the same key (SECURITY.md).
+  if (patch.blocks) {
+    const kept = new Set(s3KeysOf(patch.blocks));
+    const orphaned = s3KeysOf(existing.blocks).filter((key) => !kept.has(key));
+    if (orphaned.length > 0) await deleteObjects(orphaned);
+  }
+
+  return updated;
 }
 
 export function countTimelineRefs(milestoneId: string): Promise<number> {
@@ -100,4 +122,9 @@ export async function deleteOwnMilestone(userId: string, id: string): Promise<vo
   ];
   // TransactWriteItems caps at 100 items; MVP link counts are nowhere near that (DATA_MODEL.md).
   await ddb.send(new TransactWriteCommand({ TransactItems: transactItems }));
+
+  // Only after the DB delete succeeds: if it had failed, the milestone would
+  // still logically exist and its uploads must not have been destroyed.
+  const keys = s3KeysOf(milestone.blocks);
+  if (keys.length > 0) await deleteObjects(keys);
 }

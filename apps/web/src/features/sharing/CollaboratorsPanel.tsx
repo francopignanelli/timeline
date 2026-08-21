@@ -27,7 +27,6 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
   const [username, setUsername] = useState('');
   const [role, setRole] = useState<GrantableRole>('EDITOR');
   const [error, setError] = useState<string>();
-  const [sentTo, setSentTo] = useState<string | null>(null);
 
   const members = useMembers(scope, resourceId, true);
   const invitations = useResourceInvitations(scope, resourceId, canManage);
@@ -39,16 +38,15 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
 
   const onInvite = async () => {
     setError(undefined);
-    setSentTo(null);
     if (username.length < 3) {
       setError(t('collab.errors.usernameTooShort'));
       return;
     }
     try {
       await invite.mutateAsync({ username, role });
-      // Confirm explicitly: the invitation is in-app, so without this the
-      // sender has no signal that anything happened.
-      setSentTo(username);
+      // No separate "invitation sent" confirmation: the new card appearing
+      // under Pending invitations, right below, already says exactly that —
+      // a second message repeating it was pure duplication.
       setUsername('');
     } catch (err) {
       // 404 here means "no such user" — the only case worth distinguishing.
@@ -117,11 +115,6 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
           </div>
 
           {error && <p className="text-sm text-danger">{error}</p>}
-          {sentTo && (
-            <p role="status" className="text-sm text-accent">
-              {t('collab.inviteSent', { username: sentTo })}
-            </p>
-          )}
         </div>
       )}
 
@@ -175,16 +168,21 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
       </div>
 
       {canManage && invitations.data && invitations.data.length > 0 && (
-        <div className="flex flex-col">
-          <h3 className="mb-2 text-sm font-medium text-text-muted">{t('collab.pending')}</h3>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium text-text-muted">{t('collab.pending')}</h3>
           {invitations.data.map((invitation) => (
             <div
               key={invitation.id}
-              className="flex items-center justify-between gap-3 border-b border-border py-2.5 last:border-b-0"
+              className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5"
             >
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate font-mono text-sm text-text">
-                  @{invitation.inviteeUsername}
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex items-center gap-2">
+                  <span className="truncate font-mono text-sm text-text">
+                    @{invitation.inviteeUsername}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs text-text-muted">
+                    {t(`collab.statusBadge.${invitation.status}`)}
+                  </span>
                 </span>
                 <span className="text-xs text-text-muted">
                   {t('collab.awaitingReply', { role: t(`collab.roles.${invitation.role}`) })}
@@ -193,7 +191,7 @@ export function CollaboratorsPanel({ scope, resourceId, canManage }: Collaborato
               <button
                 type="button"
                 onClick={() => void revoke.mutateAsync(invitation.id)}
-                className="text-xs text-text-muted hover:text-danger"
+                className="shrink-0 text-xs text-text-muted hover:text-danger"
               >
                 {t('collab.revoke')}
               </button>

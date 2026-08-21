@@ -17,11 +17,13 @@ import { StageLayer } from './StageLayer';
 import { MilestoneLayer } from './MilestoneLayer';
 import { AddMilestoneDialog } from './AddMilestoneDialog';
 import { AddStageDialog } from './AddStageDialog';
+import { Button } from '../../components/ui/Button';
 
 interface TimelineCanvasProps {
   timeline: Timeline;
   content: CanvasContent;
   selectedMilestoneId: string | null;
+  selectedStageId?: string | null;
   onOpenMilestone: (milestoneId: string) => void;
   onOpenStage: (stageId: string) => void;
   /** Public/visitor mode: pan and zoom stay, every mutation affordance goes. */
@@ -46,6 +48,7 @@ export function TimelineCanvas({
   timeline,
   content,
   selectedMilestoneId,
+  selectedStageId = null,
   onOpenMilestone,
   onOpenStage,
   readOnly = false,
@@ -89,7 +92,7 @@ export function TimelineCanvas({
     return items.milestones.map((m) => {
       const labelWidth = Math.min(
         MILESTONE_LABEL_MAX_PX,
-        measureTextWidth(m.title, MILESTONE_LABEL_FONT) * MEASURE_SAFETY + 4,
+        measureTextWidth(m.label, MILESTONE_LABEL_FONT) * MEASURE_SAFETY + 4,
       );
       return {
         id: m.id,
@@ -111,6 +114,17 @@ export function TimelineCanvas({
   const fit = useCallback(() => {
     if (width > 0) setScale(fitRange(items.fitStart, items.fitEnd, width));
   }, [width, items.fitStart, items.fitEnd]);
+
+  // "100%" is defined as the fit-to-view scale, not some absolute px/day
+  // baseline — there's no natural "actual size" for a day-based canvas, and
+  // tying it to Fit (right next to the readout) makes the number mean
+  // something a viewer can act on: back to 100 is back to the whole range.
+  const fitScale = useMemo(
+    () => (width > 0 ? fitRange(items.fitStart, items.fitEnd, width) : null),
+    [width, items.fitStart, items.fitEnd],
+  );
+  const zoomPercent =
+    scale && fitScale ? Math.round((scale.pxPerDay / fitScale.pxPerDay) * 100) : 100;
 
   useEffect(() => {
     if (!scale && width > 0) fit();
@@ -139,7 +153,10 @@ export function TimelineCanvas({
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    if ((e.target as Element).closest('button, [role="button"]')) return;
+    // [data-canvas-hit] covers the milestone connector's invisible hit-slop:
+    // a decorative (role="presentation") click target, so it needs its own
+    // marker to be excluded from drag-start the same way real buttons are.
+    if ((e.target as Element).closest('button, [role="button"], [data-canvas-hit]')) return;
     containerRef.current?.setPointerCapture(e.pointerId);
     dragState.current = { pointerId: e.pointerId, lastX: e.clientX };
     setDragging(true);
@@ -161,6 +178,14 @@ export function TimelineCanvas({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // The Add Milestone/Add Stage dialogs render inside this same container,
+    // so typing in one of their fields bubbles a keydown up to here. Without
+    // this guard, "0" (fit), "+"/"-" (zoom) and the arrow keys (pan) hijack
+    // ordinary typing and text-cursor movement — "0" in particular calls
+    // preventDefault(), which silently blocks the character from ever
+    // reaching the input (reported: can't type a 0 in milestone/stage forms).
+    const target = e.target as HTMLElement;
+    if (target.closest('input, textarea, select, dialog')) return;
     if (!scale) return;
     const zoomCenter = width / 2;
     if (e.key === 'ArrowRight') setScale(panByPx(scale, -KEY_PAN_PX));
@@ -213,6 +238,7 @@ export function TimelineCanvas({
               stages={visibleStages}
               lanes={lanes}
               axisY={axisY}
+              selectedId={selectedStageId}
               onOpen={onOpenStage}
             />
             <TimeAxisLayer
@@ -221,6 +247,8 @@ export function TimelineCanvas({
               axisY={axisY}
               rulerVisible={rulerVisible}
               today={today}
+              rangeStartDay={items.boundStart}
+              ongoing={timeline.ongoing}
             />
           </svg>
           <MilestoneLayer
@@ -244,35 +272,53 @@ export function TimelineCanvas({
         </p>
       )}
 
-      <div className="absolute right-4 top-4 flex gap-2">
+      <div className="absolute right-4 top-4 flex items-center gap-2">
         {!readOnly && (
           <>
-            <CanvasButton
-              label={t('canvas.addMilestone.title')}
-              onClick={() => setAddMilestoneOpen(true)}
-            >
+            {/* + Milestone is the primary action here — creating content is
+                what most toolbar visits are for; + Stage is the secondary,
+                less frequent counterpart. */}
+            <Button className="h-9 px-3 text-sm" onClick={() => setAddMilestoneOpen(true)}>
               {t('canvas.addMilestone.short')}
-            </CanvasButton>
-            <CanvasButton label={t('canvas.addStage.title')} onClick={() => setAddStageOpen(true)}>
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-9 px-3 text-sm"
+              onClick={() => setAddStageOpen(true)}
+            >
               {t('canvas.addStage.short')}
-            </CanvasButton>
+            </Button>
+            <div aria-hidden="true" className="mx-1 h-6 w-px bg-border" />
           </>
         )}
-        <CanvasButton
-          label={t('canvas.zoomOut')}
-          onClick={() => scale && setScale(zoomAt(scale, width / 2, 1 / BUTTON_ZOOM_FACTOR))}
-        >
-          −
-        </CanvasButton>
-        <CanvasButton
-          label={t('canvas.zoomIn')}
-          onClick={() => scale && setScale(zoomAt(scale, width / 2, BUTTON_ZOOM_FACTOR))}
-        >
-          +
-        </CanvasButton>
-        <CanvasButton label={t('canvas.fit')} onClick={fit}>
-          {t('canvas.fit')}
-        </CanvasButton>
+
+        {/* Zoom out / current level / zoom in / fit read as one connected
+            control, not four separate buttons — the percentage is what ties
+            them together (100% is defined as the Fit scale, right next to it). */}
+        <div className="flex h-9 items-center overflow-hidden rounded-lg border border-border bg-surface-elevated">
+          <CanvasGroupButton
+            label={t('canvas.zoomOut')}
+            onClick={() => scale && setScale(zoomAt(scale, width / 2, 1 / BUTTON_ZOOM_FACTOR))}
+          >
+            −
+          </CanvasGroupButton>
+          <span className="min-w-10 select-none text-center font-mono text-xs tabular-nums text-text-muted">
+            {zoomPercent}%
+          </span>
+          <CanvasGroupButton
+            label={t('canvas.zoomIn')}
+            onClick={() => scale && setScale(zoomAt(scale, width / 2, BUTTON_ZOOM_FACTOR))}
+          >
+            +
+          </CanvasGroupButton>
+          <div aria-hidden="true" className="h-5 w-px bg-border" />
+          <CanvasGroupButton label={t('canvas.fit')} onClick={fit} wide>
+            {t('canvas.fit')}
+          </CanvasGroupButton>
+        </div>
+
+        <div aria-hidden="true" className="mx-1 h-6 w-px bg-border" />
+
         <CanvasButton
           label={t('canvas.ruler')}
           pressed={rulerVisible}
@@ -317,6 +363,30 @@ function CanvasButton({ label, onClick, pressed, children }: CanvasButtonProps) 
       className={`h-9 min-w-9 rounded-lg border border-border bg-surface-elevated px-2.5 text-sm transition-colors ${
         pressed === false ? 'text-text-muted' : 'text-text-secondary'
       } hover:text-text`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Borderless variant for a button living inside the connected zoom pill — the pill supplies the border, not each button. */
+function CanvasGroupButton({
+  label,
+  onClick,
+  wide,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  wide?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className={`h-9 ${wide ? 'px-3' : 'w-9'} text-sm text-text-secondary transition-colors hover:bg-surface hover:text-text`}
     >
       {children}
     </button>

@@ -7,13 +7,6 @@ import { formatRangeCompact } from '../../lib/format-date';
 import { useTimelines } from './hooks';
 import { CreateTimelineDialog } from './CreateTimelineDialog';
 
-function greetingKey(): 'morning' | 'afternoon' | 'evening' {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'morning';
-  if (hour < 19) return 'afternoon';
-  return 'evening';
-}
-
 export function DashboardPage() {
   const { t } = useTranslation();
   const { data: timelines, isLoading, isError, refetch } = useTimelines();
@@ -21,7 +14,7 @@ export function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-12 md:py-16">
-      <p className="font-serif text-4xl text-text">{t(`dashboard.greeting.${greetingKey()}`)}</p>
+      <h1 className="font-serif text-4xl text-text">{t('dashboard.title')}</h1>
 
       {/* Invitations now live in the header's notifications panel, so they're
           reachable from every page rather than only the dashboard. */}

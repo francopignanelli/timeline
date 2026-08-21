@@ -53,33 +53,6 @@ export function moveBlockBefore(
   );
 }
 
-/**
- * Inserts a copy directly below the original.
- *
- * A duplicated media block deliberately keeps the same `s3Key`: the copy
- * references the object already in the bucket rather than re-uploading it, so
- * duplicating costs no extra storage.
- */
-export function duplicateBlock(
-  blocks: readonly ContentBlock[],
-  urls: UrlDrafts,
-  id: string,
-  newId: string = crypto.randomUUID(),
-): { blocks: ContentBlock[]; urls: UrlDrafts } {
-  const index = blocks.findIndex((b) => b.id === id);
-  if (index === -1) return { blocks: [...blocks], urls };
-
-  const copy: ContentBlock = { ...blocks[index]!, id: newId };
-  const nextBlocks = [...blocks];
-  nextBlocks.splice(index + 1, 0, copy);
-
-  const draft = urls[id];
-  return {
-    blocks: nextBlocks,
-    urls: draft === undefined ? urls : { ...urls, [newId]: draft },
-  };
-}
-
 export type ResolveResult =
   | { ok: true; blocks: ContentBlock[] }
   | { ok: false; reason: 'YOUTUBE' | 'SETLIST' };

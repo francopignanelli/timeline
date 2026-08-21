@@ -3,7 +3,7 @@ import type { TranslationShape } from './en';
 /** Typed against the English bundle's shape so a missing key fails the build. */
 export const es: TranslationShape = {
   common: {
-    appName: 'Timeline',
+    appName: 'Timelines',
     cancel: 'Cancelar',
     create: 'Crear',
     close: 'Cerrar',
@@ -12,11 +12,14 @@ export const es: TranslationShape = {
     logout: 'Cerrar sesión',
     present: 'Presente',
     language: 'Idioma',
+    theme: { toDark: 'Cambiar a modo oscuro', toLight: 'Cambiar a modo claro' },
     errorGeneric: 'Algo salió mal. Intenta de nuevo.',
     edit: 'Editar',
     save: 'Guardar',
     delete: 'Eliminar',
     color: 'Color',
+    shortLabel: 'Etiqueta corta',
+    shortLabelHint: 'Nombre compacto que se muestra en la línea de tiempo. Si está vacío, se usa el nombre completo.',
   },
   colors: {
     DEFAULT: 'Predeterminado',
@@ -61,13 +64,13 @@ export const es: TranslationShape = {
     inviteLabel: 'Invitar por nombre de usuario',
     usernamePlaceholder: 'usuario',
     invite: 'Invitar',
-    inviteSent: 'Invitación enviada a @{{username}}.',
     awaitingReply: 'Invitado como {{role}} — esperando respuesta',
     role: 'Rol',
     roles: { OWNER: 'Propietario', EDITOR: 'Editor', VIEWER: 'Lector' },
     whoHasAccess: 'Quién tiene acceso',
     noCollaborators: 'Aún no hay colaboradores.',
     pending: 'Invitaciones pendientes',
+    statusBadge: { PENDING: 'Pendiente', ACCEPTED: 'Aceptada', DECLINED: 'Rechazada' },
     revoke: 'Revocar',
     remove: 'Quitar',
     milestoneSection: 'Colaboradores en este hito',
@@ -104,7 +107,6 @@ export const es: TranslationShape = {
     },
   },
   library: {
-    title: 'Mi biblioteca',
     tab: { milestones: 'Hitos', stages: 'Etapas' },
     mine: 'Míos',
     sharedWithMe: 'Compartidos conmigo',
@@ -142,7 +144,6 @@ export const es: TranslationShape = {
     addFile: 'Adjuntar archivo',
     moveUp: 'Subir',
     moveDown: 'Bajar',
-    duplicate: 'Duplicar bloque',
     remove: 'Quitar bloque',
     type: {
       TEXT: 'Texto',
@@ -233,9 +234,19 @@ export const es: TranslationShape = {
       confirmSubmit: 'Guardar nueva contraseña',
       backToLogin: 'Volver a iniciar sesión',
     },
+    changePassword: {
+      title: 'Cambiar contraseña',
+      current: 'Contraseña actual',
+      new: 'Nueva contraseña',
+      confirm: 'Confirmar nueva contraseña',
+      submit: 'Actualizar contraseña',
+      success: 'Contraseña actualizada.',
+    },
     errors: {
       invalidEmail: 'Ingresa un correo válido',
       passwordMin: 'La contraseña debe tener al menos 8 caracteres',
+      passwordMismatch: 'Las contraseñas no coinciden',
+      incorrectCurrentPassword: 'La contraseña actual es incorrecta.',
       usernameInvalid: 'Usa minúsculas, números, - o _',
       usernameTooShort: 'Al menos {{min}} caracteres',
       displayNameRequired: 'Ingresa un nombre',
@@ -249,11 +260,7 @@ export const es: TranslationShape = {
     },
   },
   dashboard: {
-    greeting: {
-      morning: 'Buenos días.',
-      afternoon: 'Buenas tardes.',
-      evening: 'Buenas noches.',
-    },
+    title: 'Líneas de tiempo',
     yourTimelines: 'Tus líneas de tiempo',
     newTimeline: 'Nueva línea de tiempo',
     empty: {
@@ -289,6 +296,11 @@ export const es: TranslationShape = {
     canvasPlaceholder: 'El lienzo de la línea de tiempo llega en la Fase 2.',
     backToDashboard: 'Volver al panel',
     notFound: 'Esta línea de tiempo no existe.',
+    delete: {
+      warning:
+        '¿Eliminar esta línea de tiempo de forma permanente? Sus hitos y etapas no se eliminan — solo se desvinculan, ya que pueden reutilizarse en otro lado. Esto no se puede deshacer.',
+      confirm: 'Eliminar línea de tiempo',
+    },
   },
   canvas: {
     label: 'Lienzo de la línea de tiempo',
@@ -297,6 +309,7 @@ export const es: TranslationShape = {
     fit: 'Ajustar',
     ruler: 'Regla',
     empty: 'Aún no hay hitos ni etapas.',
+    axisStart: 'Inicio',
     addMilestone: {
       title: 'Agregar hito',
       short: '+ Hito',
@@ -366,13 +379,20 @@ export const es: TranslationShape = {
       YEAR: 'Año',
       APPROXIMATE: 'Aproximada',
     },
-    day: 'Fecha',
+    day: 'Día',
     month: 'Mes',
     quarter: 'Trimestre',
     year: 'Año',
+    dayPlaceholder: 'DD',
+    monthPlaceholder: 'MM',
+    yearPlaceholder: 'AAAA',
   },
   notFound: {
     title: 'Página no encontrada',
     back: 'Ir al panel',
+  },
+  legal: {
+    termsLink: 'Términos y Condiciones',
+    backToApp: 'Volver a la app',
   },
 };

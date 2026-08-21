@@ -10,6 +10,7 @@ import {
   signIn,
   signOut,
   signUp,
+  updatePassword,
 } from 'aws-amplify/auth';
 import type { Locale } from '@timeline/shared';
 import '../../lib/amplify';
@@ -44,6 +45,8 @@ interface AuthContextValue {
   verify: (code: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   confirmPasswordReset: (email: string, code: string, newPassword: string) => Promise<void>;
+  /** In-session change, distinct from the forgot-password email-code flow: requires the current password, not a code. */
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -145,6 +148,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const changePassword = useCallback(async (oldPassword: string, newPassword: string) => {
+    await updatePassword({ oldPassword, newPassword });
+  }, []);
+
   const logout = useCallback(async () => {
     await signOut();
     setUser(null);
@@ -160,9 +167,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verify,
       requestPasswordReset,
       confirmPasswordReset,
+      changePassword,
       logout,
     }),
-    [user, pending, isInitializing, login, register, verify, requestPasswordReset, confirmPasswordReset, logout],
+    [
+      user,
+      pending,
+      isInitializing,
+      login,
+      register,
+      verify,
+      requestPasswordReset,
+      confirmPasswordReset,
+      changePassword,
+      logout,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

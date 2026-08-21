@@ -1,13 +1,22 @@
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ulid } from 'ulid';
 import type { PresignUploadInput } from '@timeline/shared';
 import { notFound } from '../../http-error';
+import { trackPendingUpload } from '../../repositories/uploads-repo';
 
 const s3 = new S3Client({});
 
 const UPLOAD_URL_TTL_SECONDS = 60 * 5;
 const VIEW_URL_TTL_SECONDS = 60 * 15;
+/** How long an uploaded-but-never-attached file survives before cleanup reclaims it. */
+export const ORPHAN_UPLOAD_GRACE_DAYS = 2;
 
 function bucket(): string {
   const name = process.env.MEDIA_BUCKET;
@@ -47,6 +56,10 @@ export async function presignUpload(
     }),
     { expiresIn: UPLOAD_URL_TTL_SECONDS, signableHeaders: new Set(['content-type', 'content-length']) },
   );
+  // Registered immediately, before the client has even uploaded: if the block
+  // is never saved into a milestone/stage, the periodic sweep is what notices
+  // and reclaims it (runUploadCleanup) — this key is otherwise invisible.
+  await trackPendingUpload(userId, key, ORPHAN_UPLOAD_GRACE_DAYS);
   return { uploadUrl, key };
 }
 
@@ -107,4 +120,27 @@ export async function presignPublicViewUrls(keys: string[]): Promise<Record<stri
 export async function deleteObject(userId: string, key: string): Promise<void> {
   assertOwnsKey(userId, key);
   await s3.send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
+}
+
+/**
+ * Batch delete for server-initiated cleanup — a block removed from a
+ * milestone/stage, an entity permanently deleted, or the orphaned-upload
+ * sweep. No per-key ownership check: unlike `deleteObject` (a caller-supplied
+ * key from an authenticated request), every key here already came from
+ * content the caller was just authorized to modify, or from cross-checking
+ * against current content in `runUploadCleanup`.
+ */
+export async function deleteObjects(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  // DeleteObjectsCommand caps at 1000 keys per call; batches stay well under
+  // that at this app's scale, but chunk defensively rather than assume it.
+  for (let i = 0; i < keys.length; i += 1000) {
+    const chunk = keys.slice(i, i + 1000);
+    await s3.send(
+      new DeleteObjectsCommand({
+        Bucket: bucket(),
+        Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
+  }
 }

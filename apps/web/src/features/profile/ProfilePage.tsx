@@ -274,6 +274,11 @@ export function ProfilePage() {
               </Button>
             </div>
           </form>
+          <div className="mt-8 border-t border-border pt-5">
+            <Link to="/terms" className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline">
+              {t('legal.termsLink')}
+            </Link>
+          </div>
         </>
       )}
     </div>

@@ -20,6 +20,7 @@ export function AddMilestoneDialog({ timelineId, open, onClose }: AddMilestoneDi
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<'new' | 'existing'>('new');
   const [title, setTitle] = useState('');
+  const [shortLabel, setShortLabel] = useState('');
   const [date, setDate] = useState<PartialDate | null>(null);
   const [text, setText] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -32,6 +33,7 @@ export function AddMilestoneDialog({ timelineId, open, onClose }: AddMilestoneDi
     if (open) {
       setTab('new');
       setTitle('');
+      setShortLabel('');
       setDate(null);
       setText('');
       setSelectedId(null);
@@ -56,6 +58,7 @@ export function AddMilestoneDialog({ timelineId, open, onClose }: AddMilestoneDi
         }
         const parsed = createMilestoneSchema.safeParse({
           title: title.trim(),
+          shortLabel: shortLabel.trim(),
           date,
           blocks: text.trim() ? [{ id: crypto.randomUUID(), type: 'TEXT', order: 0, text: text.trim() }] : [],
         });
@@ -96,6 +99,13 @@ export function AddMilestoneDialog({ timelineId, open, onClose }: AddMilestoneDi
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+            <TextField
+              id="add-milestone-short-label"
+              label={t('common.shortLabel')}
+              hint={t('common.shortLabelHint')}
+              value={shortLabel}
+              onChange={(e) => setShortLabel(e.target.value)}
+            />
             <PartialDatePicker
               idPrefix="add-milestone-date"
               label={t('canvas.addMilestone.date')}
@@ -120,7 +130,9 @@ export function AddMilestoneDialog({ timelineId, open, onClose }: AddMilestoneDi
             {existing.data?.map((m) => (
               <label
                 key={m.id}
-                className="flex cursor-pointer items-center justify-between gap-4 border-b border-border px-4 py-3 text-sm last:border-b-0 hover:bg-surface"
+                className={`flex cursor-pointer items-center justify-between gap-4 border-b border-border px-4 py-3 text-sm transition-colors last:border-b-0 ${
+                  selectedId === m.id ? 'bg-accent/10' : 'hover:bg-surface'
+                }`}
               >
                 <span className="flex items-center gap-3">
                   <input
@@ -130,7 +142,9 @@ export function AddMilestoneDialog({ timelineId, open, onClose }: AddMilestoneDi
                     onChange={() => setSelectedId(m.id)}
                     className="accent-accent"
                   />
-                  {m.title}
+                  <span className={selectedId === m.id ? 'font-medium text-text' : undefined}>
+                    {m.title}
+                  </span>
                 </span>
                 <span className="font-mono text-xs text-text-muted">
                   {formatPartialDate(m.date, i18n.language)}

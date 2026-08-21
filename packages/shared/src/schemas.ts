@@ -45,6 +45,15 @@ export const usernameSchema = z
 
 const titleSchema = z.string().trim().min(1).max(LIMITS.TITLE_MAX);
 
+/**
+ * Empty string explicitly clears a previously-set short label — the same
+ * convention as `website`/`avatarKey` on the profile schema — so the field
+ * can be un-set without the client having to omit the key entirely.
+ */
+const shortLabelSchema = z
+  .union([z.literal(''), z.string().trim().min(1).max(LIMITS.SHORT_LABEL_MAX)])
+  .optional();
+
 interface TemporalRange {
   start: z.infer<typeof partialDateSchema>;
   end?: z.infer<typeof partialDateSchema> | undefined;
@@ -241,6 +250,7 @@ export const userSearchSchema = z.object({
 
 const milestoneBaseSchema = z.object({
   title: titleSchema,
+  shortLabel: shortLabelSchema,
   date: partialDateSchema,
   blocks: blocksSchema,
 });
@@ -250,6 +260,7 @@ export const updateMilestoneSchema = milestoneBaseSchema.partial();
 
 const stageBaseSchema = z.object({
   title: titleSchema,
+  shortLabel: shortLabelSchema,
   description: z.string().max(LIMITS.DESCRIPTION_MAX).optional(),
   start: partialDateSchema,
   end: partialDateSchema.optional(),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CalendarDate, DatePrecision, PartialDate } from '@timeline/shared';
 import {
@@ -20,15 +20,10 @@ interface PartialDatePickerProps {
   error?: string;
 }
 
-function toISO({ day, month, year }: CalendarDate): string {
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
-
-function fromISO(iso: string): CalendarDate | null {
-  const [y, m, d] = iso.split('-').map(Number);
-  if (!y || !m || !d) return null;
-  const candidate = { day: d, month: m, year: y };
-  return parseDateString(formatDateString(candidate));
+/** Round-trips through the app's own DD/MM/YYYY parser so day/month/year get exactly its calendar validation (Feb 31, etc.). */
+function candidateOrNull(day: number, month: number, year: number): CalendarDate | null {
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
+  return parseDateString(formatDateString({ day, month, year }));
 }
 
 /**
@@ -81,14 +76,71 @@ export function PartialDatePicker({ idPrefix, label, value, onChange, error }: P
   };
 
   /*
-   * The year field keeps its own text buffer while focused.
+   * Every text field below (day/month/year here, and the standalone year
+   * field further down) keeps its own buffer while focused instead of being
+   * fully controlled by the committed value.
    *
-   * It used to be a controlled input that committed on every keystroke and
-   * rejected anything outside 1–9999 — which silently reverted the two most
-   * common edits: clearing the field ("" parses as 0) and typing a leading
-   * zero. Buffering lets those intermediate states exist on screen; only a
-   * complete, in-range year is committed, and blur discards anything partial.
+   * It used to be fully controlled and reject anything outside a valid
+   * range — which silently reverted the two most common edits: clearing the
+   * field ("" parses as 0) and typing a leading zero. Buffering lets those
+   * intermediate states exist on screen; only a valid value is committed
+   * upstream, and blur discards anything left incomplete.
    */
+  const [dayText, setDayText] = useState<string | null>(null);
+  const [monthText, setMonthText] = useState<string | null>(null);
+  const [dayYearText, setDayYearText] = useState<string | null>(null);
+  const monthFieldRef = useRef<HTMLInputElement>(null);
+  const dayYearFieldRef = useRef<HTMLInputElement>(null);
+
+  const displayedDay = dayText ?? (parsed ? String(parsed.day).padStart(2, '0') : '');
+  const displayedMonthDigits = monthText ?? (parsed ? String(parsed.month).padStart(2, '0') : '');
+  const displayedDayYear = dayYearText ?? (parsed ? String(parsed.year).padStart(4, '0') : '');
+
+  // Commits as soon as all three fields hold *some* digits that together form
+  // a valid calendar date — same leniency as the year-only field below,
+  // rather than waiting for exactly 2/2/4 digits before anything commits.
+  const commitDayPrecision = (day: string, month: string, year: string) => {
+    if (day.length === 0 || month.length === 0 || year.length === 0) return;
+    const candidate = candidateOrNull(Number(day), Number(month), Number(year));
+    if (candidate) onChange({ date: formatDateString(candidate), precision: 'DAY' });
+  };
+
+  const handleDayChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 2);
+    setDayText(digits);
+    commitDayPrecision(digits, displayedMonthDigits, displayedDayYear);
+    if (digits.length === 2) monthFieldRef.current?.focus();
+  };
+
+  const handleMonthDigitsChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 2);
+    setMonthText(digits);
+    commitDayPrecision(displayedDay, digits, displayedDayYear);
+    if (digits.length === 2) dayYearFieldRef.current?.focus();
+  };
+
+  const handleDayYearChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 4);
+    setDayYearText(digits);
+    commitDayPrecision(displayedDay, displayedMonthDigits, digits);
+  };
+
+  /*
+   * Clearing a buffer on that field's own blur (as the standalone year field
+   * below does) is wrong here: tabbing day → month → year blurs day before
+   * month and year exist to complete the commit, so an incomplete trio never
+   * commits — and the buffer-clear then made the just-typed digits vanish
+   * the moment focus moved to the next field, even though the user was still
+   * mid-entry. Only clear when focus leaves the group of three entirely.
+   */
+  const clearDayPrecisionBuffersIfGroupBlurred = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      setDayText(null);
+      setMonthText(null);
+      setDayYearText(null);
+    }
+  };
+
   const [yearText, setYearText] = useState<string | null>(null);
   const displayedYear = yearText ?? String(parsed?.year ?? currentYear);
 
@@ -109,7 +161,7 @@ export function PartialDatePicker({ idPrefix, label, value, onChange, error }: P
 
   return (
     <FieldShell id={`${idPrefix}-precision`} label={label} error={error}>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <select
           id={`${idPrefix}-precision`}
           aria-label={t('dates.precisionLabel')}
@@ -125,16 +177,53 @@ export function PartialDatePicker({ idPrefix, label, value, onChange, error }: P
         </select>
 
         {precision === 'DAY' && (
-          <input
-            type="date"
-            aria-label={t('dates.day')}
-            value={parsed ? toISO(parsed) : ''}
-            onChange={(e) => {
-              const cd = e.target.value ? fromISO(e.target.value) : null;
-              onChange(cd ? { date: formatDateString(cd), precision: 'DAY' } : null);
-            }}
-            className={`${inputClasses} w-44`}
-          />
+          // Three plain digit fields in DD/MM/YYYY order, not
+          // `<input type="date">`: a native date input's displayed format
+          // (mm/dd/yyyy vs dd/mm/yyyy) follows the browser/OS locale, not
+          // this app's own i18n language or its DD/MM/YYYY domain convention
+          // (CLAUDE.md) — there is no way to override that from HTML/CSS, so
+          // it could silently show the wrong order regardless of app
+          // language. This is always DD/MM/YYYY, unconditionally.
+          <div className="flex items-center gap-1" onBlur={clearDayPrecisionBuffersIfGroupBlurred}>
+            <input
+              type="text"
+              inputMode="numeric"
+              aria-label={t('dates.day')}
+              placeholder={t('dates.dayPlaceholder')}
+              maxLength={2}
+              value={displayedDay}
+              onChange={(e) => handleDayChange(e.target.value)}
+              className={`${inputClasses} w-14 text-center font-mono`}
+            />
+            <span aria-hidden="true" className="text-text-muted">
+              /
+            </span>
+            <input
+              ref={monthFieldRef}
+              type="text"
+              inputMode="numeric"
+              aria-label={t('dates.month')}
+              placeholder={t('dates.monthPlaceholder')}
+              maxLength={2}
+              value={displayedMonthDigits}
+              onChange={(e) => handleMonthDigitsChange(e.target.value)}
+              className={`${inputClasses} w-14 text-center font-mono`}
+            />
+            <span aria-hidden="true" className="text-text-muted">
+              /
+            </span>
+            <input
+              ref={dayYearFieldRef}
+              type="text"
+              inputMode="numeric"
+              aria-label={t('dates.year')}
+              placeholder={t('dates.yearPlaceholder')}
+              maxLength={4}
+              value={displayedDayYear}
+              onChange={(e) => handleDayYearChange(e.target.value)}
+              className={`${inputClasses} w-20 text-center font-mono`}
+            />
+          </div>
         )}
 
         {precision === 'MONTH' && (

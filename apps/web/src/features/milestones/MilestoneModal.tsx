@@ -12,7 +12,7 @@ import { BlockEditor } from '../blocks/BlockEditor';
 import { BlockList } from '../blocks/BlockList';
 import { resolveBlocks, seedUrlDrafts } from '../blocks/block-draft';
 import type { UrlDrafts } from '../blocks/block-draft';
-import { CollaboratorsPanel } from '../sharing/CollaboratorsPanel';
+import { MilestoneCollaboratorsDialog } from '../sharing/MilestoneCollaboratorsDialog';
 import { Button } from '../../components/ui/Button';
 import { ColorPicker } from '../../components/ui/ColorPicker';
 import { Dialog } from '../../components/ui/Dialog';
@@ -42,7 +42,9 @@ export function MilestoneModal({
   const { t, i18n } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
   const [title, setTitle] = useState('');
+  const [shortLabel, setShortLabel] = useState('');
   const [date, setDate] = useState<PartialDate | null>(null);
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   // Raw URL text per block, so a half-typed URL never destroys a stored id.
@@ -75,6 +77,7 @@ export function MilestoneModal({
       setEditing(false);
       setConfirmingDelete(false);
       setTitle(milestone.title);
+      setShortLabel(milestone.shortLabel ?? '');
       setDate(milestone.date);
       setBlocks([...milestone.blocks].sort((a, b) => a.order - b.order));
       setUrls(seedUrlDrafts(milestone.blocks));
@@ -103,7 +106,12 @@ export function MilestoneModal({
     }
 
     try {
-      await update.mutateAsync({ title: title.trim(), date, blocks: resolved.blocks });
+      await update.mutateAsync({
+        title: title.trim(),
+        shortLabel: shortLabel.trim(),
+        date,
+        blocks: resolved.blocks,
+      });
       if ((milestoneRef?.color ?? 'DEFAULT') !== color) {
         await updateLink.mutateAsync({ color });
       }
@@ -124,7 +132,7 @@ export function MilestoneModal({
   };
 
   return (
-    <Dialog open onClose={onClose} title={editing ? t('milestone.edit.title') : milestone.title}>
+    <Dialog open size="lg" onClose={onClose} title={editing ? t('milestone.edit.title') : milestone.title}>
       {confirmingDelete ? (
         <div className="flex flex-col gap-4">
           <p className="text-sm text-text">
@@ -154,6 +162,13 @@ export function MilestoneModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
+          <TextField
+            id="milestone-edit-short-label"
+            label={t('common.shortLabel')}
+            hint={t('common.shortLabelHint')}
+            value={shortLabel}
+            onChange={(e) => setShortLabel(e.target.value)}
+          />
           <PartialDatePicker
             idPrefix="milestone-edit-date"
             label={t('canvas.addMilestone.date')}
@@ -175,19 +190,22 @@ export function MilestoneModal({
           <p className="text-xs text-text-muted">{t('milestone.edit.mentionHint')}</p>
 
           {error && <p className="text-sm text-danger">{error}</p>}
-          <div className="mt-1 flex justify-end gap-3">
-            <Button variant="tertiary" onClick={() => setEditing(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" disabled={update.isPending || updateLink.isPending}>
-              {update.isPending || updateLink.isPending ? t('common.loading') : t('common.save')}
-            </Button>
-          </div>
-
-          {/* Milestone-scoped collaboration: rights on this milestone alone. */}
-          <div className="mt-2 border-t border-border pt-5">
-            <h3 className="mb-3 font-serif text-lg text-text">{t('collab.milestoneSection')}</h3>
-            <CollaboratorsPanel scope="MILESTONE" resourceId={milestone.id} canManage />
+          <div className="mt-1 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setCollaboratorsOpen(true)}
+              className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
+            >
+              {t('collab.milestoneSection')}
+            </button>
+            <div className="flex gap-3">
+              <Button variant="tertiary" onClick={() => setEditing(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={update.isPending || updateLink.isPending}>
+                {update.isPending || updateLink.isPending ? t('common.loading') : t('common.save')}
+              </Button>
+            </div>
           </div>
         </form>
       ) : (
@@ -207,23 +225,38 @@ export function MilestoneModal({
               {t('milestone.appearsIn', { count: referenceCount })}
             </p>
           )}
-          <div className="mt-2 flex flex-wrap justify-end gap-3 border-t border-border pt-4">
-            <Button variant="tertiary" onClick={onUnlink} disabled={unlink.isPending}>
-              {t('milestone.unlink')}
-            </Button>
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              {t('common.edit')}
-            </Button>
-            <Button
-              variant="tertiary"
-              className="text-danger hover:text-danger"
-              onClick={() => setConfirmingDelete(true)}
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={() => setCollaboratorsOpen(true)}
+              className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
             >
-              {t('common.delete')}
-            </Button>
+              {t('collab.milestoneSection')}
+            </button>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button variant="tertiary" onClick={onUnlink} disabled={unlink.isPending}>
+                {t('milestone.unlink')}
+              </Button>
+              <Button variant="secondary" onClick={() => setEditing(true)}>
+                {t('common.edit')}
+              </Button>
+              <Button
+                variant="tertiary"
+                className="text-danger hover:text-danger"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                {t('common.delete')}
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
+      <MilestoneCollaboratorsDialog
+        milestoneId={milestone.id}
+        open={collaboratorsOpen}
+        onClose={() => setCollaboratorsOpen(false)}
+      />
     </Dialog>
   );
 }

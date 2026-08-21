@@ -66,8 +66,15 @@ Single developer, low request volumes, tiny data. Every chosen service is server
 - **Pricing**: $0.023/GB-month storage; free tier 5 GB + 20k GET / 2k PUT per month. Dev usage: **$0**; realistic worst case well under $0.50/mo.
 - **Risks**: unbounded storage growth; abuse via large or many uploads; egress.
 - **Safeguards**: server-enforced size caps (images ≤5 MB, files ≤10 MB) and a narrow MIME allowlist, both checked **before** a presigned URL is issued and pinned into the signature; ≤50 blocks per milestone bounds attachments per item; presigned URLs are short-lived (5 min upload / 15 min view); bucket is private with all public access blocked; `abortIncompleteMultipartUploadAfter: 1 day` reclaims failed uploads.
-- **Known gap**: no garbage collection of objects when a milestone/block is deleted, and uploads abandoned before save are orphaned. Bounded and negligible at these caps; revisit with a lifecycle sweeper if storage ever shows up in the budget.
+- **Gap closed (2026-08-21)**: deleting a milestone/stage, or removing a file/image block from one, now deletes the associated S3 object(s) in the same request (`apps/api/src/modules/milestones/service.ts`, `stages/service.ts`). A daily EventBridge rule additionally sweeps uploads that were presigned but never attached to a saved entity — see "Upload cleanup" below.
 - **Deferrable?** No longer — user-requested and approved. **Contains user uploads — `RemovalPolicy.RETAIN`; never destroy without explicit confirmation.**
+
+### Upload cleanup sweep (live as of 2026-08-21)
+- **Purpose**: reclaim S3 objects that were presigned but never attached to a saved milestone/stage (user picked a file, it uploaded, they closed the editor without saving).
+- **Mechanism**: reuses the existing API Lambda — no second function, role, or log group. One EventBridge rule (`rate(1 day)`) invokes it with a custom `{"task":"upload-cleanup"}` payload that `lambda.ts` dispatches to `runUploadCleanup()` instead of the Hono app.
+- **Pricing**: one extra Lambda invocation/day (free-tier negligible) + one DynamoDB Scan/day over a small table + a handful of S3 deletes. Effectively $0.
+- **Safety**: an upload is only deleted once it is BOTH past a 2-day grace period AND absent from a freshly recomputed set of every S3 key any current milestone/stage actually references — never from a cached "confirmed" flag. Verified with a mutation test (`apps/api/src/modules/uploads/cleanup.test.ts`) that fails if the reference check is ever removed.
+- **Deferrable?** No longer — user-requested (orphaned-file / free-storage-abuse concern).
 
 ### Deferred services (not in MVP — each needs its own COST NOTICE before introduction)
 - **CloudFront + S3 hosting** (deployed frontend): CloudFront has 1 TB/month always-free transfer; reviewed at hosting phase.

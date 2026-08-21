@@ -5,7 +5,7 @@ import type {
   UpdateMilestoneLinkInput,
   UpdateStageLinkInput,
 } from '@timeline/shared';
-import { createTimeline, getTimeline, listTimelines } from '../../lib/timelines-api';
+import { createTimeline, deleteTimeline, getTimeline, listTimelines } from '../../lib/timelines-api';
 import { ApiError } from '../../lib/api-client';
 import { getMilestoneTimelineCount } from '../../lib/milestones-api';
 import {
@@ -106,5 +106,13 @@ export function useUnlinkStage(timelineId: string) {
   return useMutation({
     mutationFn: (stageId: string) => unlinkStage(timelineId, stageId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['timelines', timelineId, 'content'] }),
+  });
+}
+
+export function useDeleteTimeline() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteTimeline,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['timelines'] }),
   });
 }

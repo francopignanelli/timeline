@@ -6,10 +6,21 @@ interface DialogProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /**
+   * `md` (default) suits short forms (create/add dialogs). `lg` is for
+   * content-heavy views — the Milestone and Stage editors carry a growing
+   * list of blocks and need the extra width to keep them comfortable.
+   */
+  size?: 'md' | 'lg';
 }
 
+const SIZE_CLASSES: Record<NonNullable<DialogProps['size']>, string> = {
+  md: 'max-w-lg',
+  lg: 'max-w-3xl',
+};
+
 /** Native <dialog>-based modal: focus trap, Esc and backdrop click for free. */
-export function Dialog({ open, onClose, title, children }: DialogProps) {
+export function Dialog({ open, onClose, title, children, size = 'md' }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -30,7 +41,7 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
       // Desktop: centered card that scrolls internally rather than growing past
       // the viewport (milestone editors can carry several blocks). Mobile:
       // full-screen sheet, per UI_SPEC.md.
-      className="m-auto max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-surface-elevated p-6 text-text backdrop:bg-dark/40 max-sm:h-full max-sm:max-h-full max-sm:max-w-full max-sm:rounded-none max-sm:border-0"
+      className={`m-auto max-h-[85vh] w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-6 text-text backdrop:bg-dark/40 backdrop:backdrop-blur-sm max-sm:h-full max-sm:max-h-full max-sm:max-w-full max-sm:rounded-none max-sm:border-0 ${SIZE_CLASSES[size]}`}
     >
       {open && (
         <>

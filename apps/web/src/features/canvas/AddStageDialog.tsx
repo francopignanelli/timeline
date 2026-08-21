@@ -20,6 +20,7 @@ export function AddStageDialog({ timelineId, open, onClose }: AddStageDialogProp
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<'new' | 'existing'>('new');
   const [title, setTitle] = useState('');
+  const [shortLabel, setShortLabel] = useState('');
   const [description, setDescription] = useState('');
   const [start, setStart] = useState<PartialDate | null>(null);
   const [ongoing, setOngoing] = useState(true);
@@ -34,6 +35,7 @@ export function AddStageDialog({ timelineId, open, onClose }: AddStageDialogProp
     if (open) {
       setTab('new');
       setTitle('');
+      setShortLabel('');
       setDescription('');
       setStart(null);
       setOngoing(true);
@@ -60,6 +62,7 @@ export function AddStageDialog({ timelineId, open, onClose }: AddStageDialogProp
         }
         const parsed = createStageSchema.safeParse({
           title: title.trim(),
+          shortLabel: shortLabel.trim(),
           description: description.trim() || undefined,
           start,
           end: ongoing ? undefined : (end ?? undefined),
@@ -102,6 +105,13 @@ export function AddStageDialog({ timelineId, open, onClose }: AddStageDialogProp
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+            <TextField
+              id="add-stage-short-label"
+              label={t('common.shortLabel')}
+              hint={t('common.shortLabelHint')}
+              value={shortLabel}
+              onChange={(e) => setShortLabel(e.target.value)}
+            />
             <TextareaField
               id="add-stage-description"
               label={t('timeline.form.description')}
@@ -138,7 +148,9 @@ export function AddStageDialog({ timelineId, open, onClose }: AddStageDialogProp
             {existing.data?.map((s) => (
               <label
                 key={s.id}
-                className="flex cursor-pointer items-center justify-between gap-4 border-b border-border px-4 py-3 text-sm last:border-b-0 hover:bg-surface"
+                className={`flex cursor-pointer items-center justify-between gap-4 border-b border-border px-4 py-3 text-sm transition-colors last:border-b-0 ${
+                  selectedId === s.id ? 'bg-accent/10' : 'hover:bg-surface'
+                }`}
               >
                 <span className="flex items-center gap-3">
                   <input
@@ -148,7 +160,9 @@ export function AddStageDialog({ timelineId, open, onClose }: AddStageDialogProp
                     onChange={() => setSelectedId(s.id)}
                     className="accent-accent"
                   />
-                  {s.title}
+                  <span className={selectedId === s.id ? 'font-medium text-text' : undefined}>
+                    {s.title}
+                  </span>
                 </span>
                 <span className="font-mono text-xs text-text-muted">
                   {formatPartialDate(s.start, i18n.language)}

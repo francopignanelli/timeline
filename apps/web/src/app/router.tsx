@@ -42,6 +42,9 @@ const LibraryPage = lazy(() =>
 const PublicTimelinePage = lazy(() =>
   import('../features/public/PublicTimelinePage').then((m) => ({ default: m.PublicTimelinePage })),
 );
+const TermsPage = lazy(() =>
+  import('../features/legal/TermsPage').then((m) => ({ default: m.TermsPage })),
+);
 
 function LoadingScreen() {
   return <div className="flex min-h-screen items-center justify-center bg-bg" />;
@@ -91,6 +94,17 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<RouteFallback />}>
         <PublicTimelinePage />
+      </Suspense>
+    ),
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    // Reachable signed-in or signed-out — a Terms page that only worked for
+    // one audience would defeat the point, so it sits outside every guard.
+    path: '/terms',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <TermsPage />
       </Suspense>
     ),
     errorElement: <RouteErrorPage />,

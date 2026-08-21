@@ -29,3 +29,23 @@ export function measureTextWidth(text: string, font: string): number {
   cache.set(key, width);
   return width;
 }
+
+/**
+ * Truncates to the longest prefix (plus "…") that fits `maxWidth` at `font`
+ * — for SVG `<text>`, which has no CSS `text-overflow: ellipsis` of its own.
+ * Sized by actual rendered width, not a fixed character count, so a wide
+ * character set or a narrow one both truncate at the same visual point.
+ */
+export function truncateToWidth(text: string, maxWidth: number, font: string): string {
+  if (measureTextWidth(text, font) <= maxWidth) return text;
+
+  let low = 0;
+  let high = text.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    const candidate = `${text.slice(0, mid)}…`;
+    if (measureTextWidth(candidate, font) <= maxWidth) low = mid;
+    else high = mid - 1;
+  }
+  return low > 0 ? `${text.slice(0, low)}…` : '…';
+}

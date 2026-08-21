@@ -21,8 +21,8 @@ interface PartialDate {
 
 - **User**: id (Cognito sub), username, displayName, bio?, location?, website?, locale (`en`|`es`), createdAt.
 - **Timeline**: id, ownerId, title, description?, start: PartialDate, end?: PartialDate, ongoing: boolean, unit (`DAYS|MONTHS|QUARTERS|YEARS`), rulerVisible: boolean, visibility (`PRIVATE|SHARED|UNLISTED|PUBLIC`, MVP enforces PRIVATE), createdAt, updatedAt.
-- **Milestone**: id, ownerId, title, date: PartialDate, blocks: ContentBlock[], createdAt, updatedAt.
-- **Stage**: id, ownerId, title, description?, start: PartialDate, end?: PartialDate, ongoing: boolean, blocks?: ContentBlock[], createdAt, updatedAt. (`blocks` is optional because Stages predate it — stages stored before DECISIONS #39 have none and stay valid.)
+- **Milestone**: id, ownerId, title, shortLabel?: string (compact canvas display name, falls back to `title` — DECISIONS #53), date: PartialDate, blocks: ContentBlock[], createdAt, updatedAt.
+- **Stage**: id, ownerId, title, shortLabel?: string (same fallback as Milestone), description?, start: PartialDate, end?: PartialDate, ongoing: boolean, blocks?: ContentBlock[], createdAt, updatedAt. (`blocks` is optional because Stages predate it — stages stored before DECISIONS #39 have none and stay valid.)
 - **TimelineMilestone** (link): timelineId, milestoneId, displayOrder, isHighlighted, isHidden, color?, addedAt.
 - **TimelineStage** (link): timelineId, stageId, displayStyle?, isHighlighted, color?, addedAt. (`lane` is computed at render time — see DECISIONS #10.)
 

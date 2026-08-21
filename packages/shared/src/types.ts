@@ -204,6 +204,8 @@ export interface Milestone {
   id: string;
   ownerId: string;
   title: string;
+  /** Compact canvas display name. Falls back to `title` wherever it's empty/unset. */
+  shortLabel?: string;
   date: PartialDate;
   blocks: ContentBlock[];
   mentions?: Mention[];
@@ -215,6 +217,8 @@ export interface Stage {
   id: string;
   ownerId: string;
   title: string;
+  /** Compact canvas display name. Falls back to `title` wherever it's empty/unset. */
+  shortLabel?: string;
   description?: string;
   start: PartialDate;
   end?: PartialDate;

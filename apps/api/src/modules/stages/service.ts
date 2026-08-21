@@ -1,11 +1,16 @@
 import { TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { createStageSchema } from '@timeline/shared';
-import type { CreateStageInput, Stage, UpdateStageInput } from '@timeline/shared';
+import type { ContentBlock, CreateStageInput, Stage, UpdateStageInput } from '@timeline/shared';
 import * as repo from '../../repositories/stages-repo';
 import * as linksRepo from '../../repositories/links-repo';
 import * as membersRepo from '../../repositories/members-repo';
 import { ddb, tableName } from '../../repositories/dynamo-client';
 import * as access from '../access/service';
+import { deleteObjects } from '../uploads/service';
+
+function s3KeysOf(blocks: ContentBlock[] | undefined): string[] {
+  return (blocks ?? []).flatMap((block) => ('s3Key' in block ? [block.s3Key] : []));
+}
 
 export function listOwnStages(ownerId: string): Promise<Stage[]> {
   return repo.listStagesByOwner(ownerId);
@@ -42,7 +47,17 @@ export async function updateOwnStage(
     ongoing: patch.ongoing ?? existing.ongoing,
     blocks: patch.blocks ?? existing.blocks,
   });
-  return repo.updateStage(id, patch);
+  const updated = await repo.updateStage(id, patch);
+
+  // Same rule as milestones: a block the user removed leaves its upload
+  // behind unless something explicitly deletes it.
+  if (patch.blocks) {
+    const kept = new Set(s3KeysOf(patch.blocks));
+    const orphaned = s3KeysOf(existing.blocks).filter((key) => !kept.has(key));
+    if (orphaned.length > 0) await deleteObjects(orphaned);
+  }
+
+  return updated;
 }
 
 export function countTimelineRefs(stageId: string): Promise<number> {
@@ -68,4 +83,8 @@ export async function deleteOwnStage(userId: string, id: string): Promise<void> 
     })),
   ];
   await ddb.send(new TransactWriteCommand({ TransactItems: transactItems }));
+
+  // Only after the DB delete succeeds — see the same ordering in milestones/service.ts.
+  const keys = s3KeysOf(stage.blocks);
+  if (keys.length > 0) await deleteObjects(keys);
 }

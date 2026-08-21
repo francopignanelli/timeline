@@ -5,7 +5,7 @@ import { LIMITS } from '@timeline/shared';
 import { acceptFor, isFileMime, isImageMime, maxBytesFor, uploadFile } from '../../lib/uploads-api';
 import { Button } from '../../components/ui/Button';
 import { TextareaField, TextField } from '../../components/ui/fields';
-import { duplicateBlock, moveBlock, moveBlockBefore, newBlock } from './block-draft';
+import { moveBlock, moveBlockBefore, newBlock } from './block-draft';
 import type { AddableBlockKind, UrlDrafts } from './block-draft';
 
 interface BlockEditorProps {
@@ -22,7 +22,7 @@ interface BlockEditorProps {
 
 /**
  * The modular content-block editor shared by Milestones and Stages: blocks can
- * be added, edited, duplicated, removed and reordered, and the order saved is
+ * be added, edited, removed and reordered, and the order saved is
  * whatever the user arranged here.
  *
  * Reordering is offered twice on purpose. Drag-and-drop is the fast path, but
@@ -69,17 +69,6 @@ export function BlockEditor({
     onBlocksChange(blocks.filter((b) => b.id !== id));
     const { [id]: _dropped, ...rest } = urls;
     onUrlsChange(rest);
-  };
-
-  const onDuplicate = (id: string) => {
-    if (atLimit) {
-      onError(t('blocks.errors.limitReached', { max: LIMITS.BLOCKS_MAX }));
-      return;
-    }
-    onError(undefined);
-    const next = duplicateBlock(blocks, urls, id);
-    onBlocksChange(next.blocks);
-    onUrlsChange(next.urls);
   };
 
   const move = (index: number, delta: number) =>
@@ -202,9 +191,6 @@ export function BlockEditor({
                   onClick={() => move(i, 1)}
                 >
                   ↓
-                </BlockAction>
-                <BlockAction label={t('blocks.duplicate')} onClick={() => onDuplicate(block.id)}>
-                  ⧉
                 </BlockAction>
                 <BlockAction label={t('blocks.remove')} danger onClick={() => removeBlock(block.id)}>
                   ✕

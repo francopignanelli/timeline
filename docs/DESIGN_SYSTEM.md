@@ -32,6 +32,32 @@ Implemented as CSS variables in `apps/web/src/styles/tokens.css`, mapped into Ta
 
 Accent (#315CF5) is reserved for: primary actions, selected/active Milestones, links, focus rings, meaningful brand details. Neutral Milestones/Stages stay quiet. Never use accent as a background wash.
 
+### Dark mode (2026-08-21, DECISIONS #45)
+
+Same token *names*, dark values, applied under `:root[data-theme='dark']` in `tokens.css`. Because every component already reads colors through `var(--color-*)` rather than a hardcoded value, this override block is the entire theme — there is no dark-mode variant to maintain per component. `src/lib/theme.ts` + `ThemeToggle` own the toggle and persistence; a value is never a raw hex outside `tokens.css`.
+
+```css
+:root[data-theme='dark'] {
+  --bg: #171613;
+  --surface: #201E1A;
+  --surface-elevated: #29271F;
+
+  --text: #F2F0EA;
+  --text-secondary: #C9C5BB;
+  --text-muted: #8F8B80;
+
+  --border: #3A362C;
+  --timeline-line: #47432F;
+
+  --accent: #6F8DFF;
+  --accent-hover: #8FA5FF;
+
+  --danger: #E0685C;
+}
+```
+
+The entity palette (below) is unchanged in dark mode — its hues are already saturated enough to read against a dark ground.
+
 ### Entity palette (user-selectable Milestone/Stage color)
 
 ```css

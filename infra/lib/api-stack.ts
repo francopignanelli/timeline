@@ -6,6 +6,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -127,6 +129,23 @@ export class ApiStack extends Stack {
     // Least privilege: the function presigns and deletes objects, and never
     // needs to list the bucket or touch its configuration.
     mediaBucket.grantReadWrite(fn);
+
+    /*
+     * Daily sweep for uploads that were presigned but never attached to a
+     * saved milestone/stage (apps/api/src/modules/uploads/cleanup.ts). Reuses
+     * this same Lambda — a custom event payload is how lambda.ts tells this
+     * invocation apart from an API Gateway request — rather than a second
+     * function, so it costs one extra invocation a day, not new compute, a
+     * new role, or a new log group (COSTS.md).
+     */
+    new events.Rule(this, 'UploadCleanupSchedule', {
+      schedule: events.Schedule.rate(Duration.days(1)),
+      targets: [
+        new targets.LambdaFunction(fn, {
+          event: events.RuleTargetInput.fromObject({ task: 'upload-cleanup' }),
+        }),
+      ],
+    });
 
     const httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
       corsPreflight: {

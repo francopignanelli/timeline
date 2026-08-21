@@ -1,6 +1,7 @@
-# Timeline — Status
+# Timelines — Status
 
-**Last updated**: 2026-08-19
+**Last updated**: 2026-08-21
+**App version**: 1.0 (DECISIONS #44 — bump the second number for a small change, the first for a bigger one; shown next to the logo everywhere it renders)
 
 ## Current phase
 **Phase 8 (sharing, collaboration, mentions) complete** — built beyond the original 7-phase MVP at user request. Design review and full detail: **`docs/SHARING_PLAN.md`**; decisions in DECISIONS #35–37.
@@ -110,7 +111,7 @@ Backlog (each spec'd in PRODUCT.md, each needs its own plan + cost review): medi
 - This AWS account's total Lambda concurrency limit is 10 (DECISIONS #24) — if a second Lambda function is ever added (e.g., a future async job), the same "no reserved concurrency" constraint applies unless the account limit is raised.
 
 ## Deliberate Phase 7 simplifications (revisit later)
-- **No S3 garbage collection**: deleting a milestone or removing a block leaves its object in the bucket, and an upload abandoned before save is orphaned. Bounded and negligible at current caps (DECISIONS #34); a lifecycle sweeper is the answer if storage ever appears in the budget.
+- ~~No S3 garbage collection~~ — superseded 2026-08-21 (DECISIONS #42): deleting a milestone/stage or removing a block now deletes its S3 object(s) in the same request; a daily sweep reclaims uploads that were never attached to anything at all.
 - ~~Milestone block reordering is still add/remove-only~~ — superseded 2026-08-20 (DECISIONS #41): drag-and-drop plus keyboard move buttons, across all five block types.
 - Image blocks have no client-side downscaling — a 5 MB photo is stored and served at full size. Fine at this scale; a resize-on-upload step is the obvious next win if galleries get heavy.
 - The main bundle is still ~465 kB (Amplify-dominated) despite route splitting; only matters once the app is actually hosted (DECISIONS #14).
@@ -121,13 +122,55 @@ Backlog (each spec'd in PRODUCT.md, each needs its own plan + cost review): medi
 
 **Not verified in a browser**: the block editor lives behind login, and this session had no credentials for it — correctness rests on the unit tests plus typecheck/lint/build, not on a rendered check. There is no component-test infra (no jsdom/testing-library) and adding it wasn't in scope.
 
-**⚠ Blocked on deploy — frontend is ahead of backend**: the setlist.fm backend from 2026-08-19 was pushed but **never deployed** (the AWS SSO session expired first). Netlify rebuilt from that push, so the live frontend sends `SETLIST` blocks that the deployed Lambda's schema rejects — this is the user-reported 400 on save. This session's stage-blocks work adds a second undeployed backend change on top. Deploying `TimelineDevApi` clears both. Order of operations:
+**Resolved 2026-08-21**: AWS SSO re-authenticated, the setlist.fm SecureString parameter created, and `TimelineDevApi` deployed — the frontend/backend skew above is gone and setlist saves work on the live app.
 
-1. `aws sso login --profile timeline-dev`
-2. Create the SecureString parameter `/timeline/dev/setlistfm-api-key` (value never committed).
-3. `cd infra && npx cdk deploy TimelineDevApi --profile timeline-dev --require-approval never`
+**⚠ Key hygiene (still open)**: the setlist.fm API key was pasted into a chat transcript. It is absent from the working tree and from git history (verified), but rotating it at setlist.fm is still the safe move and hasn't been confirmed done.
 
-**⚠ Key hygiene**: the setlist.fm API key was pasted into a chat transcript. It is absent from the working tree and from git history (verified), but rotating it at setlist.fm is the safe move.
+## Session 2026-08-21 — upload cleanup, Terms page, header rework, canvas polish
+
+**Upload lifecycle (DECISIONS #42)**: deleting a milestone/stage, or removing/replacing a file or image block via PATCH, now deletes the affected S3 object(s) in the same request (after the DB write succeeds, never before). A new daily EventBridge rule invokes the existing API Lambda with a `{task:'upload-cleanup'}` payload — dispatched in `lambda.ts` before it ever reaches Hono — to reclaim uploads that were presigned but never attached to anything. Safety rests on cross-checking every pending upload against a freshly recomputed set of S3 keys actually referenced by current content, not a cached flag; this property is mutation-tested (`uploads/cleanup.test.ts`).
+
+**Terms & Conditions**: a generic bilingual ToS lives at `/terms` (reachable signed-in or out), linked from the login/register footer and the profile page. Every field needing real information (operator name, contact email, jurisdiction, effective date) is visibly flagged with a highlight and a top-of-page callout — this is a template, not reviewed legal text (DECISIONS #43).
+
+**Header**: darker background + bottom divider for visual separation; nav (Timelines/Milestones/Stages) is centered on the header (~~originally a `1fr auto 1fr` grid column~~ — superseded 2026-08-21, DECISIONS #46: that only centers when the logo and the actions cluster happen to match in width, which broke visibly once a nav label got long). Logout moved off the header into a new avatar dropdown (`UserMenu`), which also gained an in-session "change password" flow (Cognito `updatePassword`, distinct from the existing emailed-code forgot-password flow).
+
+**Canvas**: the timeline start now has its own vivid accent-colored marker (line + flag + "Start" label); an ongoing timeline's present-day edge gets a red arrow and a "Present" label at a different height than the start label so the two can never overlap regardless of zoom. Milestone/stage hover now drives cursor + highlight from one shared state covering the connector line, dot/band, and label together, not just the label. Fixed: the three "pick an existing item" pickers (Add Milestone, Add Stage, Add to Timeline) selected a radio button internally but never visibly highlighted the selected row.
+
+**Also this session**: removed the block-duplicate feature (button + function) per user request; Milestone/Stage editors widened (`Dialog` gained a `size="lg"` variant); modal backdrop now blurs.
+
+**Not verified in a browser**: the header/menu/canvas changes are all behind login, and this session had no credentials — verified via typecheck/lint/164 passing tests/production build, plus a logged-out check of `/terms` and the login page. `cdk synth` confirmed the EventBridge rule and Lambda permission synthesize correctly.
+
+## Session 2026-08-21 (cont.) — versioning, dark mode, rename, Terms fill-in, header fix
+
+**App renamed Timeline → Timelines**: the wordmark (`LogoFull`, now via `common.appName` instead of a hardcoded string), the browser tab title, and the Terms document. Deliberately scoped to user-visible strings only — the npm workspace package name (`@timeline/shared`), CDK stack names (`TimelineDevApi`, `TimelineDevAuth`), and the GitHub repo were left untouched; renaming those would mean either breaking every import in the repo or destroying and recreating deployed AWS stacks, neither of which was asked for.
+
+**Versioning**: `APP_VERSION` (`packages/shared/src/constants.ts`, currently `1.0`) shows next to the logo everywhere `LogoFull` renders, and on the Terms page. Two-part scheme, not semver — DECISIONS #44 has the bump rule and who's responsible for it (nobody automated; it's a judgment call per change).
+
+**Dark mode**: a real toggle (`ThemeToggle`, sun/moon, next to the language switcher in both `AppLayout` and `AuthLayout`), not just a media query — defaults to system preference on first visit, then remembers the explicit choice. Works by overriding the same CSS custom properties every component already reads (DECISIONS #45); no per-component dark variant exists or is needed. Verified in the browser: toggling actually flips `data-theme` and the resolved background token, and the choice survives navigation via `localStorage`.
+
+**Header nav centering, actually fixed**: the `1fr auto 1fr` grid from earlier today only centers when the logo and the actions cluster (now four items: theme toggle, language switcher, notifications, avatar) happen to match in rendered width — user reported it was visibly off once a nav label was long. Replaced with the nav absolutely positioned at the header's true center, independent of either side (DECISIONS #46).
+
+**Terms page filled in**: real operator name, contact email, and jurisdiction (Argentina, Buenos Aires) provided by the app's owner; the "this is a generic template, get it reviewed" callout and the placeholder-highlighting machinery were removed at the owner's request now that the fields are real. Still not the same thing as a lawyer-reviewed document — nobody has represented that it is.
+
+**Dashboard/Library headings**: the dashboard's time-of-day greeting ("Good morning.") is now a static "Timelines" heading; the Milestones/Stages library tabs now show their own name as the heading instead of a shared generic "My library" title.
+
+**Verified this round**: typecheck/lint/164 tests/build all clean; dark-mode toggle and the Terms page's real content confirmed live in the browser (no login needed for either). The header/menu changes from earlier this session are still unverified live — no credentials.
+
+## Session 2026-08-21 (cont. 2) — delete confirmation, canvas polish, Short Label
+
+**Bug fixes**: the DAY-precision date fields (added earlier this session) lost a just-typed digit whenever focus moved to the next field — each field cleared its own buffer on its own blur, before the day+month+year trio had a chance to commit. Fixed by clearing only when focus leaves the whole group of three (DECISIONS #49).
+
+**Timeline delete**: Timelines never had a delete action reachable from the UI at all (the API route and client function existed, unused). Added `useDeleteTimeline` and a confirm dialog on `TimelinePage`'s header — copy confirmed against `timelines-repo.ts`'s own doc comment: deleting a Timeline never deletes its Milestones/Stages, only unlinks them (DECISIONS #50).
+
+**Toolbar hierarchy**: + Milestone is now the primary (accent-filled) action, + Stage secondary (bordered); zoom out/percent/zoom in/Fit read as one connected pill, with 100% defined as the Fit scale; Ruler sits behind its own divider.
+
+**Hover/selected states**: selection is now color-only (accent ring/stroke/connector/label) — the `scale-125` size pop is reserved for the separate, standing `isHighlighted` flag, not for hover or selection (DECISIONS #51). Stages gained an actual selected-state concept; they only had hover before.
+
+**Axis Start/Present**: Start is now a quiet tick matching the ruler's own restraint (previously an accent-colored flag+bold label); Present's label now sits directly against the arrow tip, vertically centered on the axis, reading as one continuous "→ Present" rather than an arrow plus a separately floating label (DECISIONS #52).
+
+**Short Label** (DECISIONS #53): Milestones and Stages can carry an optional, compact `shortLabel` (40-char cap) edited right below the title field in all four forms (Add Milestone/Stage, edit Milestone/Stage), with the requested helper text. The canvas shows `shortLabel || title`; hover/accessible name always reveal the full title regardless. Truncation stays width-based (never a fixed character count) — Stages needed a new `truncateToWidth()` helper (`lib/measure-text.ts`, unit-tested) since SVG `<text>` has no native ellipsis; Milestones already got this for free via CSS.
+
+**Verified**: typecheck/lint/173 tests/build all clean; `truncateToWidth` and the shortLabel fallback logic are both unit-tested. The canvas/toolbar/hover changes are unverified live — still no login credentials in this session; confirmed only that the app boots without console errors.
 
 ## Next recommended task
-**Deploy `TimelineDevApi`** — two changesets are queued behind it and the live app is currently broken on setlist save because of the skew (see above). After that, the planned MVP is complete. Natural next steps, each needing its own plan + cost review: **hosting** (S3 + CloudFront — the first thing needed to use this outside localhost), then the sharing backlog (milestone sharing → timeline sharing/invitations → public/unlisted timelines), then integrations. A pre-hosting pass on presentation fields (`displayOrder`/`isHighlighted` have data-model + API support but no UI) would also round out the canvas.
+**Push and deploy this session's backend changes** (`TimelineDevApi`: the upload-cleanup EventBridge rule, shared-blocks-on-stages, and the new `shortLabel` schema field) before the frontend ships — pushing frontend-first would repeat the exact skew bug from 2026-08-20. Rotate the setlist.fm API key (pasted into a chat transcript; still open). After that, the planned MVP is complete. Natural next steps, each needing its own plan + cost review: **hosting** (S3 + CloudFront — the first thing needed to use this outside localhost), then the sharing backlog (milestone sharing → timeline sharing/invitations → public/unlisted timelines), then integrations. A pre-hosting pass on presentation fields (`displayOrder`/`isHighlighted` have data-model + API support but no UI) would also round out the canvas.

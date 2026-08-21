@@ -89,7 +89,9 @@ export function AddToTimelineDialog({
             {timelines.map((timeline) => (
               <label
                 key={timeline.id}
-                className="flex cursor-pointer items-center justify-between gap-4 border-b border-border px-4 py-3 text-sm last:border-b-0 hover:bg-surface"
+                className={`flex cursor-pointer items-center justify-between gap-4 border-b border-border px-4 py-3 text-sm transition-colors last:border-b-0 ${
+                  selectedId === timeline.id ? 'bg-accent/10' : 'hover:bg-surface'
+                }`}
               >
                 <span className="flex min-w-0 items-center gap-3">
                   <input
@@ -99,7 +101,11 @@ export function AddToTimelineDialog({
                     checked={selectedId === timeline.id}
                     onChange={() => setSelectedId(timeline.id)}
                   />
-                  <span className="truncate text-text">{timeline.title}</span>
+                  <span
+                    className={`truncate ${selectedId === timeline.id ? 'font-medium text-text' : 'text-text'}`}
+                  >
+                    {timeline.title}
+                  </span>
                 </span>
                 <span className="shrink-0 font-mono text-xs text-text-muted">
                   {formatRangeCompact(
