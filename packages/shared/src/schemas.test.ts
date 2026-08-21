@@ -104,7 +104,7 @@ describe('createMilestoneSchema', () => {
   });
 
   it('caps the number of blocks', () => {
-    const blocks = Array.from({ length: LIMITS.BLOCKS_PER_MILESTONE_MAX + 1 }, (_, i) => ({
+    const blocks = Array.from({ length: LIMITS.BLOCKS_MAX + 1 }, (_, i) => ({
       id: `b${i}`,
       type: 'TEXT' as const,
       order: i,
@@ -113,10 +113,48 @@ describe('createMilestoneSchema', () => {
     expect(createMilestoneSchema.safeParse({ ...validMilestone, blocks }).success).toBe(false);
   });
 
+  it('rejects a payload that would not fit in a DynamoDB item', () => {
+    // Few enough blocks to pass the count cap, large enough to breach the
+    // byte budget — the case the count cap alone cannot catch.
+    const blocks = Array.from({ length: 40 }, (_, i) => ({
+      id: `b${i}`,
+      type: 'TEXT' as const,
+      order: i,
+      text: 'x'.repeat(LIMITS.TEXT_BLOCK_MAX),
+    }));
+    expect(blocks.length).toBeLessThanOrEqual(LIMITS.BLOCKS_MAX);
+    expect(createMilestoneSchema.safeParse({ ...validMilestone, blocks }).success).toBe(false);
+  });
+
   it('rejects non-TEXT blocks in MVP', () => {
     expect(
       contentBlockSchema.safeParse({ id: 'b1', type: 'IMAGE', order: 0, text: '' }).success,
     ).toBe(false);
+  });
+});
+
+describe('stage blocks', () => {
+  const base = {
+    title: 'University',
+    start: { date: '01/03/2015', precision: 'MONTH' },
+    ongoing: true,
+  } as const;
+
+  it('stays valid with no blocks, so stages saved before blocks existed still parse', () => {
+    expect(createStageSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('accepts the same block kinds a milestone takes', () => {
+    const blocks = [
+      { id: 'b1', type: 'TEXT', order: 0, text: 'Notes' },
+      { id: 'b2', type: 'SETLIST', order: 1, setlistId: '1a2b3c' },
+    ];
+    expect(createStageSchema.safeParse({ ...base, blocks }).success).toBe(true);
+  });
+
+  it('rejects a malformed block', () => {
+    const blocks = [{ id: 'b1', type: 'SETLIST', order: 0, setlistId: 'NOT-HEX' }];
+    expect(createStageSchema.safeParse({ ...base, blocks }).success).toBe(false);
   });
 });
 

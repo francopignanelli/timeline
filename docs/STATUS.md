@@ -95,7 +95,7 @@ Backlog (each spec'd in PRODUCT.md, each needs its own plan + cost review): medi
 - ~~Stage popover deferred~~ / ~~Milestone editing deferred~~ — both delivered in Phase 6.
 
 ## Deliberate Phase 6 simplifications (revisit later)
-- Milestone block reordering is index-order only (add/remove, no drag-and-drop) — UI_SPEC.md mentions "reorder" but drag-and-drop for a handful of text blocks was judged not worth the added complexity yet; up/down buttons would be the next step if it's missed.
+- ~~Milestone block reordering is index-order only~~ — superseded 2026-08-20: blocks are now add/remove/duplicate/reorder on both Milestones and Stages (DECISIONS #39–41).
 - `displayOrder`/`isHighlighted`/`isHidden` presentation fields exist on link items and the backend `PATCH .../milestones/{id}` route supports them, but no UI writes them yet (reordering within a timeline, highlighting) — the data model and API are ready, the UI isn't.
 - "From existing" pickers in Add Milestone/Add Stage dialogs list *all* the owner's items, including ones already linked to the current timeline (the backend correctly 409s on a duplicate link attempt, but the picker doesn't pre-filter or show which are already linked).
 
@@ -111,9 +111,23 @@ Backlog (each spec'd in PRODUCT.md, each needs its own plan + cost review): medi
 
 ## Deliberate Phase 7 simplifications (revisit later)
 - **No S3 garbage collection**: deleting a milestone or removing a block leaves its object in the bucket, and an upload abandoned before save is orphaned. Bounded and negligible at current caps (DECISIONS #34); a lifecycle sweeper is the answer if storage ever appears in the budget.
-- Milestone block **reordering** is still add/remove-only (no drag-and-drop), now across four block types.
+- ~~Milestone block reordering is still add/remove-only~~ — superseded 2026-08-20 (DECISIONS #41): drag-and-drop plus keyboard move buttons, across all five block types.
 - Image blocks have no client-side downscaling — a 5 MB photo is stored and served at full size. Fine at this scale; a resize-on-upload step is the obvious next win if galleries get heavy.
 - The main bundle is still ~465 kB (Amplify-dominated) despite route splitting; only matters once the app is actually hosted (DECISIONS #14).
 
+## Session 2026-08-20 — modular content blocks
+
+**Done**: `blocks` became a shared content model. `Stage.blocks` added (optional); one `blocksSchema` validates Milestones and Stages alike, with a count cap (`BLOCKS_MAX` 100) and a serialized-size cap (`BLOCKS_BYTES_MAX` 350 KB). The web editor was extracted into `features/blocks/`: a framework-free `block-draft.ts` (add/remove/duplicate/move/resolve, 16 unit tests) plus `BlockEditor` and `BlockList` shared by `MilestoneModal` and `StagePopover`. Blocks reorder by drag-and-drop **and** keyboard buttons, and duplicate in place. Public-path key stripping and the media/setlist allowlists were extended to stage blocks, with mutation-checked regression tests. Fixed: clearing an embed URL now removes the block instead of blocking the save (DECISIONS #40). 143 tests pass; typecheck, lint and production build clean.
+
+**Not verified in a browser**: the block editor lives behind login, and this session had no credentials for it — correctness rests on the unit tests plus typecheck/lint/build, not on a rendered check. There is no component-test infra (no jsdom/testing-library) and adding it wasn't in scope.
+
+**⚠ Blocked on deploy — frontend is ahead of backend**: the setlist.fm backend from 2026-08-19 was pushed but **never deployed** (the AWS SSO session expired first). Netlify rebuilt from that push, so the live frontend sends `SETLIST` blocks that the deployed Lambda's schema rejects — this is the user-reported 400 on save. This session's stage-blocks work adds a second undeployed backend change on top. Deploying `TimelineDevApi` clears both. Order of operations:
+
+1. `aws sso login --profile timeline-dev`
+2. Create the SecureString parameter `/timeline/dev/setlistfm-api-key` (value never committed).
+3. `cd infra && npx cdk deploy TimelineDevApi --profile timeline-dev --require-approval never`
+
+**⚠ Key hygiene**: the setlist.fm API key was pasted into a chat transcript. It is absent from the working tree and from git history (verified), but rotating it at setlist.fm is the safe move.
+
 ## Next recommended task
-The planned MVP is complete. Natural next steps, each needing its own plan + cost review: **hosting** (S3 + CloudFront — the first thing needed to use this outside localhost), then the sharing backlog (milestone sharing → timeline sharing/invitations → public/unlisted timelines), then integrations. A pre-hosting pass on presentation fields (`displayOrder`/`isHighlighted` have data-model + API support but no UI) would also round out the canvas.
+**Deploy `TimelineDevApi`** — two changesets are queued behind it and the live app is currently broken on setlist save because of the skew (see above). After that, the planned MVP is complete. Natural next steps, each needing its own plan + cost review: **hosting** (S3 + CloudFront — the first thing needed to use this outside localhost), then the sharing backlog (milestone sharing → timeline sharing/invitations → public/unlisted timelines), then integrations. A pre-hosting pass on presentation fields (`displayOrder`/`isHighlighted` have data-model + API support but no UI) would also round out the canvas.

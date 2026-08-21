@@ -1,6 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { EntityColor, PartialDate, Stage, TimelineStageRef } from '@timeline/shared';
+import type {
+  ContentBlock,
+  EntityColor,
+  PartialDate,
+  Stage,
+  TimelineStageRef,
+} from '@timeline/shared';
+import { BlockEditor } from '../blocks/BlockEditor';
+import { BlockList } from '../blocks/BlockList';
+import { resolveBlocks, seedUrlDrafts } from '../blocks/block-draft';
+import type { UrlDrafts } from '../blocks/block-draft';
+import { useViewUrls } from '../milestones/useViewUrls';
 import { Button } from '../../components/ui/Button';
 import { ColorPicker } from '../../components/ui/ColorPicker';
 import { Dialog } from '../../components/ui/Dialog';
@@ -26,6 +37,8 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
   const [start, setStart] = useState<PartialDate | null>(null);
   const [ongoing, setOngoing] = useState(true);
   const [end, setEnd] = useState<PartialDate | null>(null);
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [urls, setUrls] = useState<UrlDrafts>({});
   const [color, setColor] = useState<EntityColor>('DEFAULT');
   const [error, setError] = useState<string>();
 
@@ -34,6 +47,7 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
   const updateLink = useUpdateStageLink(timelineId, stage?.id ?? '');
   const del = useDeleteStage();
   const { data: refCount } = useStageReferenceCount(confirmingDelete ? (stage?.id ?? null) : null);
+  const { data: viewUrls } = useViewUrls(blocks, stage !== null);
 
   /*
    * Seed the form only when a *different* stage is opened. `stage` comes from
@@ -57,6 +71,8 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
     setStart(stage.start);
     setOngoing(stage.ongoing);
     setEnd(stage.end ?? null);
+    setBlocks([...(stage.blocks ?? [])].sort((a, b) => a.order - b.order));
+    setUrls(seedUrlDrafts(stage.blocks ?? []));
     setColor(stageRef?.color ?? 'DEFAULT');
     setError(undefined);
   }, [stage, stageRef]);
@@ -69,6 +85,17 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
       setError(t('canvas.addStage.errors.startRequired'));
       return;
     }
+
+    const resolved = resolveBlocks(blocks, urls);
+    if (!resolved.ok) {
+      setError(
+        resolved.reason === 'YOUTUBE'
+          ? t('milestone.errors.videoInvalid')
+          : t('milestone.errors.setlistInvalid'),
+      );
+      return;
+    }
+
     try {
       await update.mutateAsync({
         title: title.trim(),
@@ -76,6 +103,7 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
         start,
         end: ongoing ? undefined : (end ?? undefined),
         ongoing,
+        blocks: resolved.blocks,
       });
       if ((stageRef?.color ?? 'DEFAULT') !== color) {
         await updateLink.mutateAsync({ color });
@@ -154,6 +182,17 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
             />
           )}
           <ColorPicker label={t('common.color')} value={color} onChange={setColor} />
+
+          <BlockEditor
+            idPrefix="stage-edit"
+            blocks={blocks}
+            urls={urls}
+            onBlocksChange={setBlocks}
+            onUrlsChange={setUrls}
+            onError={setError}
+            viewUrls={viewUrls}
+          />
+
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="mt-1 flex justify-end gap-3">
             <Button variant="tertiary" onClick={() => setEditing(false)}>
@@ -175,6 +214,9 @@ export function StagePopover({ timelineId, stage, stageRef, onClose }: StagePopo
                 : ''}
           </p>
           {stage.description && <p className="text-sm text-text-secondary">{stage.description}</p>}
+
+          <BlockList blocks={stage.blocks ?? []} viewUrls={viewUrls} />
+
           <div className="mt-2 flex flex-wrap justify-end gap-3 border-t border-border pt-4">
             <Button variant="tertiary" onClick={onUnlink} disabled={unlink.isPending}>
               {t('stage.unlink')}

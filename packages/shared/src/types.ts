@@ -219,6 +219,8 @@ export interface Stage {
   start: PartialDate;
   end?: PartialDate;
   ongoing: boolean;
+  /** Same modular content blocks as a Milestone, in user-defined order. */
+  blocks?: ContentBlock[];
   createdAt: string;
   updatedAt: string;
 }
@@ -275,4 +277,6 @@ export type PublicMilestone = Omit<Milestone, 'ownerId' | 'mentions' | 'blocks'>
   /** Usernames only — no user ids leak to anonymous visitors. */
   mentions?: { username: string }[];
 };
-export type PublicStage = Omit<Stage, 'ownerId'>;
+export type PublicStage = Omit<Stage, 'ownerId' | 'blocks'> & {
+  blocks?: PublicContentBlock[];
+};

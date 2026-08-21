@@ -34,7 +34,7 @@
 | Method | Path | Description |
 |---|---|---|
 | GET | `/milestones` | List own milestones (AP8) — the "add existing" picker. |
-| POST | `/milestones` | Create. Body: title, date, blocks (TEXT only in MVP). |
+| POST | `/milestones` | Create. Body: title, date, blocks (TEXT, YOUTUBE, IMAGE, FILE, SETLIST). |
 | GET | `/milestones/{milestoneId}` | Fetch one (owner only). |
 | GET | `/milestones/{milestoneId}/timeline-count` | `{ count }` — how many timelines reference it (AP10). Added beyond the original endpoint list to back the modal's "Appears in N timelines" footer (UI_SPEC.md) without over-fetching full content on every view. |
 | PATCH | `/milestones/{milestoneId}` | Update title, date, blocks. |
@@ -60,7 +60,7 @@ Keys are minted server-side as `u/<userId>/<ulid><ext>`. Ownership is decidable 
 
 ### Stages & Timeline↔Stage links
 
-Identical shape to milestones: `/stages`, `/stages/{stageId}`, `/stages/{stageId}/timeline-count`, `/timelines/{timelineId}/stages`, `/timelines/{timelineId}/stages/{stageId}`. Stage body: title, description?, start, end?, ongoing. Link presentation: displayStyle?, isHighlighted.
+Identical shape to milestones: `/stages`, `/stages/{stageId}`, `/stages/{stageId}/timeline-count`, `/timelines/{timelineId}/stages`, `/timelines/{timelineId}/stages/{stageId}`. Stage body: title, description?, start, end?, ongoing, blocks? — Stages take the same content blocks as Milestones (DECISIONS #39). Link presentation: displayStyle?, isHighlighted.
 
 ## Authorization rules (MVP)
 

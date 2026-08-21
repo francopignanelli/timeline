@@ -1,5 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type {
+  ContentBlock,
+  PublicContentBlock,
   PublicMilestone,
   PublicStage,
   PublicTimeline,
@@ -91,6 +93,15 @@ export async function getPublicTimelineMeta(token: string): Promise<PublicTimeli
   return toPublicTimeline(await getPublicTimeline(token));
 }
 
+/**
+ * Drops `s3Key` from every media block. The key path embeds the owner's user
+ * id, so it must never cross the public boundary; anonymous viewers address
+ * media by block id instead (SECURITY.md).
+ */
+function stripBlockKeys(blocks: ContentBlock[]): PublicContentBlock[] {
+  return blocks.map((block) => ('s3Key' in block ? (({ s3Key: _k, ...rest }) => rest)(block) : block));
+}
+
 export interface PublicContent {
   milestones: { ref: TimelineMilestoneRef; milestone: PublicMilestone }[];
   stages: { ref: TimelineStageRef; stage: PublicStage }[];
@@ -115,10 +126,7 @@ export async function getPublicContent(token: string): Promise<PublicContent> {
           ref,
           milestone: {
             ...rest,
-            // The key path embeds the owner's id, so it never goes out.
-            blocks: blocks.map((block) =>
-              's3Key' in block ? (({ s3Key: _k, ...b }) => b)(block) : block,
-            ),
+            blocks: stripBlockKeys(blocks),
             // Usernames survive so mentions still render; user ids do not.
             ...(mentions?.length ? { mentions: mentions.map((m) => ({ username: m.username })) } : {}),
           },
@@ -128,10 +136,42 @@ export async function getPublicContent(token: string): Promise<PublicContent> {
     stages: stageRefs.flatMap((ref) => {
       const stage = stageById.get(ref.stageId);
       if (!stage) return [];
-      const { ownerId: _o, ...rest } = stage;
-      return [{ ref, stage: rest }];
+      const { ownerId: _o, blocks, ...rest } = stage;
+      return [{ ref, stage: { ...rest, ...(blocks ? { blocks: stripBlockKeys(blocks) } : {}) } }];
     }),
   };
+}
+
+/**
+ * Every content block reachable through a share link. Milestones *and* Stages
+ * both carry blocks, so both are walked — an allowlist built from milestones
+ * alone would silently 404 media and setlists that live on a Stage.
+ */
+async function publicBlocks(token: string): Promise<ContentBlock[]> {
+  const timeline = await getPublicTimeline(token);
+  const { milestoneRefs, stageRefs } = await linksRepo.listTimelineLinks(timeline.id);
+  const [milestoneById, stageById] = await Promise.all([
+    linksRepo.batchGetMilestones(milestoneRefs.map((r) => r.milestoneId)),
+    linksRepo.batchGetStages(stageRefs.map((r) => r.stageId)),
+  ]);
+
+  return [
+    ...[...milestoneById.values()].flatMap((m) => m.blocks),
+    ...[...stageById.values()].flatMap((st) => st.blocks ?? []),
+  ];
+}
+
+/**
+ * Setlist ids this shared timeline actually references. The public setlist
+ * route serves only these, so a share link can't be used to proxy arbitrary
+ * setlist.fm lookups through our API key.
+ */
+export async function publicSetlistIds(token: string): Promise<Set<string>> {
+  const ids = new Set<string>();
+  for (const block of await publicBlocks(token)) {
+    if (block.type === 'SETLIST') ids.add(block.setlistId);
+  }
+  return ids;
 }
 
 /**
@@ -140,37 +180,11 @@ export async function getPublicContent(token: string): Promise<PublicContent> {
  * so a caller-supplied key is never signed and the private bucket stays
  * private (SECURITY.md).
  */
-/**
- * Setlist ids this shared timeline actually references. The public setlist
- * route serves only these, so a share link can't be used to proxy arbitrary
- * setlist.fm lookups through our API key.
- */
-export async function publicSetlistIds(token: string): Promise<Set<string>> {
-  const timeline = await getPublicTimeline(token);
-  const { milestoneRefs } = await linksRepo.listTimelineLinks(timeline.id);
-  const milestoneById = await linksRepo.batchGetMilestones(milestoneRefs.map((r) => r.milestoneId));
-
-  const ids = new Set<string>();
-  for (const milestone of milestoneById.values()) {
-    for (const block of milestone.blocks) {
-      if (block.type === 'SETLIST') ids.add(block.setlistId);
-    }
-  }
-  return ids;
-}
-
 export async function publicMediaKeysByBlockId(token: string): Promise<Map<string, string>> {
-  const timeline = await getPublicTimeline(token);
-  const { milestoneRefs } = await linksRepo.listTimelineLinks(timeline.id);
-  const milestoneById = await linksRepo.batchGetMilestones(milestoneRefs.map((r) => r.milestoneId));
-
   const map = new Map<string, string>();
-  for (const ref of milestoneRefs) {
-    const milestone = milestoneById.get(ref.milestoneId);
-    if (!milestone) continue;
-    for (const block of milestone.blocks) {
-      if ('s3Key' in block) map.set(block.id, block.s3Key);
-    }
+  for (const block of await publicBlocks(token)) {
+    if ('s3Key' in block) map.set(block.id, block.s3Key);
   }
   return map;
 }
+

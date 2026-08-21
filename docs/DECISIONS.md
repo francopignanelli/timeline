@@ -231,3 +231,25 @@ Format per entry: **Choice / Why / Important alternative / Why not chosen.** Use
 **Why**: Two user-reported issues (2026-08-19): dot-distance-only clustering let wide labels overlap, and a fixed axis wasted the whole below zone on stage-less timelines while towers crowded the top edge. Balanced two-sided placement halves tower height; the level cap plus dot-only degradation keeps edges padded and the canvas clean while every milestone's existence stays visible.
 **Alternative**: Fixed axis with above-only stacking and uncapped levels (first implementation).
 **Why not**: Wasted half the canvas on stage-less timelines and let stacks reach the viewport edge.
+
+## 39. Content blocks are a shared, reorderable structure on both Milestones and Stages (2026-08-20)
+**Choice**: `blocks` moves from a Milestone-only field to the shared content model — `Stage.blocks` is added (optional), the cap is renamed `BLOCKS_MAX` and raised to 100, and one `blocksSchema` validates both. On the web side a single framework-free module (`features/blocks/block-draft.ts`) owns add/remove/duplicate/move/resolve, with `BlockEditor` and `BlockList` shared by `MilestoneModal` and `StagePopover`. `order` is renumbered from on-screen position at save time, so the stored sequence is exactly what the user arranged.
+**Why**: User-requested (2026-08-20): unlimited blocks on both entities, freely reorderable. Duplicating the editor into `StagePopover` would have doubled the surface where the public-path key-stripping and URL-resolution rules must hold; keeping the rules in one pure module means both entities inherit fixes automatically, and the reorder/duplicate logic is unit-testable without rendering.
+**Alternative**: Keep blocks on Milestones and give Stages a richer description field.
+**Why not**: It re-collapses the distinction the product principles keep — a Stage is a first-class entity, not a labelled interval — and would have meant two divergent editors.
+
+**Security consequence (deliberate, tested)**: Stage blocks now cross the public boundary, so they need the same treatment milestone blocks already had. `stripBlockKeys` is now a named helper applied to both, and the public allowlists (`publicSetlistIds`, `publicMediaKeysByBlockId`) walk milestones **and** stages — built from milestones alone they would have silently 404'd stage media. Both are covered by regression tests that were mutation-checked to confirm they actually fail when the stripping is removed.
+
+**Size guard**: the count cap alone cannot bound the payload — 40 blocks of maximum-length text exceed DynamoDB's 400KB item limit while sitting well under `BLOCKS_MAX`. `blocksSchema` therefore also enforces `BLOCKS_BYTES_MAX` (350KB), turning what would be an opaque write failure into a validation error at the boundary. "Unlimited" is honest at the scale a user will actually reach, not literally unbounded; if entries ever approach it, DATA_MODEL.md's option of storing blocks as separate items is the next step.
+
+## 40. Clearing an embed's URL removes the block instead of failing validation (2026-08-20)
+**Choice**: In `resolveBlocks`, a YouTube/setlist block whose URL field is empty is **dropped** from the saved payload. A non-empty but unparseable URL still reports an error.
+**Why**: User-reported (2026-08-20) — deleting a setlist link produced a blocking "That doesn't look like a setlist.fm link." error. An embed with no id cannot be saved at all, so treating empty as invalid trapped the user in a form that could neither be saved nor emptied, the only escape being a remove button they had no reason to look for. Empty means "I don't want this embed", which is unambiguous; empty **text** blocks are still kept, because text is primary content and silently deleting a block the user is looking at would be worse than an empty box.
+**Alternative**: Keep the error and rely on the remove button.
+**Why not**: It makes the obvious gesture (clear the field) a dead end.
+
+## 41. Reordering ships as drag-and-drop *and* explicit move buttons (2026-08-20)
+**Choice**: `BlockEditor` rows are draggable via a grip (native HTML5 drag events, no new dependency), and every row also carries ↑/↓, duplicate and remove buttons with `aria-label`s.
+**Why**: Drag-and-drop was the requested interaction, but it is unreachable by keyboard and awkward on touch, so on its own it would fail the Definition of Done's keyboard-access requirement. The grip arms `draggable` only while held, so dragging never hijacks text selection inside a block's textarea. A dnd library (`@dnd-kit` et al.) was not added: native events cover this list, and the buttons — which the accessible path needs regardless — already provide the keyboard story a library would have been bought for.
+**Alternative**: Add `@dnd-kit/sortable`.
+**Why not**: A dependency whose main benefit (accessible keyboard sorting) is already covered by controls this UI needs anyway.

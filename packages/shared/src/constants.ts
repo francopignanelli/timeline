@@ -103,7 +103,15 @@ export const LIMITS = {
   DESCRIPTION_MAX: 2000,
   BIO_MAX: 2000,
   TEXT_BLOCK_MAX: 10_000,
-  BLOCKS_PER_MILESTONE_MAX: 50,
+  /** Applies to Milestones and Stages alike — both carry the same blocks. */
+  BLOCKS_MAX: 100,
+  /**
+   * Budget for the serialized `blocks` array. A DynamoDB item is capped at
+   * 400KB and blocks are by far its largest attribute, so without this the
+   * ceiling would only surface as an opaque write failure. Checked at the
+   * boundary instead; the headroom covers the rest of the item.
+   */
+  BLOCKS_BYTES_MAX: 350_000,
   USERNAME_MIN: 3,
   USERNAME_MAX: 15,
   DISPLAY_NAME_MAX: 80,

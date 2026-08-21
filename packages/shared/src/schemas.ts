@@ -151,6 +151,27 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
   setlistBlockSchema,
 ]);
 
+/**
+ * An ordered list of content blocks, shared by Milestones and Stages.
+ *
+ * The size guard exists because the count cap alone cannot bound the payload:
+ * a handful of long text blocks can exceed DynamoDB's 400KB item limit while
+ * staying well under BLOCKS_MAX. Rejecting here turns that into a clear
+ * validation error rather than a write failure after the user has typed.
+ */
+export const blocksSchema = z
+  .array(contentBlockSchema)
+  .max(LIMITS.BLOCKS_MAX)
+  .superRefine((blocks, ctx) => {
+    const bytes = new TextEncoder().encode(JSON.stringify(blocks)).length;
+    if (bytes > LIMITS.BLOCKS_BYTES_MAX) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Content is too large (${bytes} bytes, max ${LIMITS.BLOCKS_BYTES_MAX})`,
+      });
+    }
+  });
+
 /** Body of POST /uploads/presign — validated before any URL is issued. */
 export const presignUploadSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -168,7 +189,7 @@ export const presignUploadSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const viewUrlsSchema = z.object({
-  keys: z.array(s3KeySchema).max(LIMITS.BLOCKS_PER_MILESTONE_MAX),
+  keys: z.array(s3KeySchema).max(LIMITS.BLOCKS_MAX),
 });
 
 // ---------------------------------------------------------------------------
@@ -205,7 +226,7 @@ export const setVisibilitySchema = z.object({
 
 /** Public media is addressed by block id — object keys never cross the boundary. */
 export const publicMediaUrlsSchema = z.object({
-  blockIds: z.array(z.string().min(1).max(64)).max(LIMITS.BLOCKS_PER_MILESTONE_MAX),
+  blockIds: z.array(z.string().min(1).max(64)).max(LIMITS.BLOCKS_MAX),
 });
 
 export const userSearchSchema = z.object({
@@ -221,7 +242,7 @@ export const userSearchSchema = z.object({
 const milestoneBaseSchema = z.object({
   title: titleSchema,
   date: partialDateSchema,
-  blocks: z.array(contentBlockSchema).max(LIMITS.BLOCKS_PER_MILESTONE_MAX),
+  blocks: blocksSchema,
 });
 
 export const createMilestoneSchema = milestoneBaseSchema;
@@ -233,6 +254,9 @@ const stageBaseSchema = z.object({
   start: partialDateSchema,
   end: partialDateSchema.optional(),
   ongoing: z.boolean(),
+  // Optional, unlike a Milestone's: Stages predate blocks, so every stage
+  // already stored has none and must stay valid.
+  blocks: blocksSchema.optional(),
 });
 
 export const createStageSchema = stageBaseSchema.superRefine(checkTemporalRange);

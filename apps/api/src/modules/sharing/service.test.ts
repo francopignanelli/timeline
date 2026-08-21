@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Milestone, Timeline } from '@timeline/shared';
+import type { Milestone, Stage, Timeline } from '@timeline/shared';
 
 const timelinesRepo = vi.hoisted(() => ({
   getTimelineIdByShareToken: vi.fn(),
@@ -16,9 +16,8 @@ vi.mock('../../repositories/links-repo', () => linksRepo);
 
 vi.mock('../access/service', () => ({ requireTimeline: vi.fn() }));
 
-const { getPublicTimelineMeta, getPublicContent, publicMediaKeysByBlockId } = await import(
-  './service'
-);
+const { getPublicTimelineMeta, getPublicContent, publicMediaKeysByBlockId, publicSetlistIds } =
+  await import('./service');
 
 const OWNER_SUB = '64182408-e0a1-7054-0123-e9a252d5e985';
 
@@ -57,6 +56,40 @@ const milestone: Milestone = {
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
+
+const stage: Stage = {
+  id: 's1',
+  ownerId: OWNER_SUB,
+  title: 'A period',
+  start: { date: '01/01/2020', precision: 'YEAR' },
+  ongoing: true,
+  blocks: [
+    {
+      id: 'sb1',
+      type: 'IMAGE',
+      order: 0,
+      s3Key: `u/${OWNER_SUB}/STAGE.png`,
+      fileName: 'stage.png',
+      contentType: 'image/png',
+      size: 40,
+    },
+    { id: 'sb2', type: 'SETLIST', order: 1, setlistId: '1a2b3c' },
+  ],
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+/** Wires a shared timeline holding both the milestone and the stage above. */
+function mockSharedTimeline() {
+  timelinesRepo.getTimelineIdByShareToken.mockResolvedValue('t1');
+  timelinesRepo.getTimeline.mockResolvedValue(timeline);
+  linksRepo.listTimelineLinks.mockResolvedValue({
+    milestoneRefs: [{ timelineId: 't1', milestoneId: 'm1' }],
+    stageRefs: [{ timelineId: 't1', stageId: 's1' }],
+  });
+  linksRepo.batchGetMilestones.mockResolvedValue(new Map([['m1', milestone]]));
+  linksRepo.batchGetStages.mockResolvedValue(new Map([['s1', stage]]));
+}
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -106,6 +139,30 @@ describe('public read path', () => {
     expect(serialized).not.toContain('user-ana');
   });
 
+  it('strips object keys from stage blocks, not just milestone blocks', async () => {
+    mockSharedTimeline();
+
+    const content = await getPublicContent('tok');
+    const serialized = JSON.stringify(content.stages);
+
+    expect(serialized).not.toContain(OWNER_SUB);
+    expect(serialized).not.toContain('s3Key');
+    expect(content.stages[0]?.stage).not.toHaveProperty('ownerId');
+    // The block itself survives — only the key is removed.
+    expect(content.stages[0]?.stage.blocks).toHaveLength(2);
+  });
+
+  it('allowlists media and setlists that live on a stage', async () => {
+    mockSharedTimeline();
+
+    const keys = await publicMediaKeysByBlockId('tok');
+    expect(keys.get('sb1')).toBe(`u/${OWNER_SUB}/STAGE.png`);
+
+    mockSharedTimeline();
+    const setlists = await publicSetlistIds('tok');
+    expect(setlists.has('1a2b3c')).toBe(true);
+  });
+
   it('maps block ids to keys so the client never handles an object key', async () => {
     timelinesRepo.getTimelineIdByShareToken.mockResolvedValue('t1');
     timelinesRepo.getTimeline.mockResolvedValue(timeline);
@@ -114,6 +171,7 @@ describe('public read path', () => {
       stageRefs: [],
     });
     linksRepo.batchGetMilestones.mockResolvedValue(new Map([['m1', milestone]]));
+    linksRepo.batchGetStages.mockResolvedValue(new Map());
 
     const map = await publicMediaKeysByBlockId('tok');
     expect(map.get('b2')).toBe(`u/${OWNER_SUB}/01ABC.png`);

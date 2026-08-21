@@ -40,6 +40,7 @@ export async function updateOwnStage(
     start: patch.start ?? existing.start,
     end: 'end' in patch ? patch.end : existing.end,
     ongoing: patch.ongoing ?? existing.ongoing,
+    blocks: patch.blocks ?? existing.blocks,
   });
   return repo.updateStage(id, patch);
 }
