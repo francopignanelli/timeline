@@ -254,6 +254,8 @@ export const en = {
   dashboard: {
     title: 'Timelines',
     yourTimelines: 'Your timelines',
+    mine: 'Mine',
+    sharedWithMe: 'Shared with me',
     newTimeline: 'New Timeline',
     empty: {
       title: 'No timelines yet',

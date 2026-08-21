@@ -262,6 +262,8 @@ export const es: TranslationShape = {
   dashboard: {
     title: 'Líneas de tiempo',
     yourTimelines: 'Tus líneas de tiempo',
+    mine: 'Mías',
+    sharedWithMe: 'Compartidas conmigo',
     newTimeline: 'Nueva línea de tiempo',
     empty: {
       title: 'Aún no hay líneas de tiempo',

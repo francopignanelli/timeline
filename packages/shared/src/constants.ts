@@ -6,7 +6,7 @@
  * ships a user-visible change updates it here, and mirrors it in
  * docs/STATUS.md and the Terms page's "Version" line (DECISIONS #44).
  */
-export const APP_VERSION = '2.2';
+export const APP_VERSION = '2.3';
 
 export const DATE_PRECISIONS = ['DAY', 'MONTH', 'QUARTER', 'YEAR', 'APPROXIMATE'] as const;
 export type DatePrecision = (typeof DATE_PRECISIONS)[number];

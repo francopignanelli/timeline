@@ -2,20 +2,19 @@ const STORAGE_KEY = 'timeline.theme';
 
 export type Theme = 'light' | 'dark';
 
-function systemPrefersDark(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
+/** The default for a first-time visitor with no stored choice yet (product decision, not a system-preference fallback). */
+export const DEFAULT_THEME: Theme = 'dark';
 
-/** The user's explicit choice, or the OS preference on first visit. */
+/** The user's explicit choice, or `DEFAULT_THEME` on first visit. */
 export function getStoredTheme(): Theme {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') return stored;
   } catch {
     // localStorage can throw in locked-down contexts (private mode, some
-    // embeds) — fall through to the system preference rather than crash.
+    // embeds) — fall through to the default rather than crash.
   }
-  return systemPrefersDark() ? 'dark' : 'light';
+  return DEFAULT_THEME;
 }
 
 /**

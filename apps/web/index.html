@@ -8,16 +8,13 @@
     <script>
       // Applied here, before any CSS paints, so there's no flash of the wrong
       // theme — the same logic lives in src/lib/theme.ts for the toggle to
-      // reuse after mount.
+      // reuse after mount. Dark is the product default for a first-time
+      // visitor (not a prefers-color-scheme fallback) — keep this in sync
+      // with DEFAULT_THEME there if that ever changes.
       (function () {
         try {
           var stored = localStorage.getItem('timeline.theme');
-          var theme =
-            stored === 'light' || stored === 'dark'
-              ? stored
-              : window.matchMedia('(prefers-color-scheme: dark)').matches
-                ? 'dark'
-                : 'light';
+          var theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
           document.documentElement.setAttribute('data-theme', theme);
         } catch (e) {
           // Ignore — falls back to the light palette defined on :root.
