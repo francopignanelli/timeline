@@ -35,7 +35,21 @@ export function Dialog({ open, onClose, title, children, size = 'md' }: DialogPr
       ref={ref}
       onClose={onClose}
       onMouseDown={(e) => {
-        if (e.target === ref.current) onClose(); // click on the backdrop
+        // `e.target === ref.current` alone isn't "clicked the backdrop" — a
+        // native <dialog>'s scrollbar isn't a separate element, so clicking
+        // or dragging it *also* reports the dialog itself as the target,
+        // which used to close the modal out from under anyone using the
+        // scrollbar. The backdrop is genuinely outside the dialog's own box;
+        // the scrollbar sits inside it. Comparing the click coordinates to
+        // the dialog's rect tells them apart.
+        if (e.target !== ref.current) return;
+        const rect = ref.current.getBoundingClientRect();
+        const insideDialogBox =
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom;
+        if (!insideDialogBox) onClose();
       }}
       aria-label={title}
       // Desktop: centered card that scrolls internally rather than growing past

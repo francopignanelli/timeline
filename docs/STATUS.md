@@ -1,7 +1,7 @@
 # Timelines — Status
 
 **Last updated**: 2026-08-21
-**App version**: 2.1 (DECISIONS #44 — bump the second number for a small change, the first for a bigger one; shown next to the logo everywhere it renders). History: 1.0 → 2.0 on 2026-08-21 (a large batch: upload cleanup, dark mode, Timeline→Timelines rename, Terms page, delete confirmation, canvas rework). 2.0 → 2.1 the same day: fixed the canvas's wheel handler swallowing scroll events inside the Add Milestone/Stage dialogs on short viewports (small fix, not a new feature).
+**App version**: 2.2 (DECISIONS #44 — bump the second number for a small change, the first for a bigger one; shown next to the logo everywhere it renders). History: 1.0 → 2.0 on 2026-08-21 (a large batch: upload cleanup, dark mode, Timeline→Timelines rename, Terms page, delete confirmation, canvas rework). 2.0 → 2.1 the same day: canvas wheel handler no longer swallows scroll events inside the Add Milestone/Stage dialogs on short viewports. 2.1 → 2.2 the same day: `Dialog`'s backdrop-click-to-close no longer fires for a click or drag on the dialog's own scrollbar (DECISIONS #56) — applies to every modal in the app, since they all share this one component.
 
 ## Current phase
 **Phase 8 (sharing, collaboration, mentions) complete** — built beyond the original 7-phase MVP at user request. Design review and full detail: **`docs/SHARING_PLAN.md`**; decisions in DECISIONS #35–37.
