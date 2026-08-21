@@ -160,6 +160,14 @@ export function TimelineCanvas({
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
+    // Same guard the wheel and keydown handlers carry: the Add Milestone/Add
+    // Stage dialogs render inside this container, so a pointerdown in one of
+    // them bubbles up here. Dialog already stops pointer events at its own
+    // boundary; this stays as the local backstop, because starting a drag
+    // from a modal doesn't just pan the canvas behind it — the
+    // setPointerCapture below retargets `pointerup` and kills the `click`
+    // that any checkbox inside the dialog depends on.
+    if ((e.target as Element).closest('dialog')) return;
     // [data-canvas-hit] covers the milestone connector's invisible hit-slop:
     // a decorative (role="presentation") click target, so it needs its own
     // marker to be excluded from drag-start the same way real buttons are.

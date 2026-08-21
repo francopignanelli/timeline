@@ -107,3 +107,47 @@ describe('deleteOwnStage — upload cleanup', () => {
     expect(uploadsServiceMocks.deleteObjects).not.toHaveBeenCalled();
   });
 });
+
+describe('updateOwnStage — ongoing clears the end date', () => {
+  const ended: Stage = {
+    ...stageWith([]),
+    ongoing: false,
+    end: { date: '31/12/2023', precision: 'DAY' },
+  };
+
+  it('removes a stale end date when the stage is switched to ongoing', async () => {
+    accessMocks.requireStage.mockResolvedValue(ended);
+    repoMocks.updateStage.mockResolvedValue({ ...ended, ongoing: true, end: undefined });
+
+    // What the client actually sends: `end: undefined` never survives
+    // JSON.stringify, so the body carries no `end` key at all.
+    await updateOwnStage(OWNER, 's1', { ongoing: true });
+
+    const [, writePatch, removals] = repoMocks.updateStage.mock.calls[0]!;
+    expect(removals).toEqual(['end']);
+    expect(writePatch).not.toHaveProperty('end');
+  });
+
+  it('does not reject the save even though the stored stage still has an end', async () => {
+    accessMocks.requireStage.mockResolvedValue(ended);
+    repoMocks.updateStage.mockResolvedValue({ ...ended, ongoing: true, end: undefined });
+
+    // Regression: merging `ongoing: true` with the existing `end` used to
+    // trip checkTemporalRange and throw before reaching the repository.
+    await expect(updateOwnStage(OWNER, 's1', { ongoing: true })).resolves.toBeDefined();
+  });
+
+  it('keeps the end date when ongoing is turned back off', async () => {
+    accessMocks.requireStage.mockResolvedValue({ ...ended, ongoing: true, end: undefined });
+    repoMocks.updateStage.mockResolvedValue(ended);
+
+    await updateOwnStage(OWNER, 's1', {
+      ongoing: false,
+      end: { date: '31/12/2023', precision: 'DAY' },
+    });
+
+    const [, writePatch, removals] = repoMocks.updateStage.mock.calls[0]!;
+    expect(removals).toEqual([]);
+    expect(writePatch).toMatchObject({ end: { date: '31/12/2023', precision: 'DAY' } });
+  });
+});

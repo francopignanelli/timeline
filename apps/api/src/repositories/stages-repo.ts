@@ -54,7 +54,17 @@ export async function createStage(ownerId: string, input: CreateStageInput): Pro
   return stage;
 }
 
-export async function updateStage(id: string, patch: UpdateStageInput): Promise<Stage> {
+/**
+ * `remove` deletes attributes outright. A PATCH body cannot ask for this on
+ * its own — `JSON.stringify` drops an `undefined` value, so "clear this
+ * field" and "leave it alone" arrive identical — so the caller derives the
+ * removal and states it explicitly (see `updateOwnStage` clearing `end`).
+ */
+export async function updateStage(
+  id: string,
+  patch: UpdateStageInput,
+  remove: readonly string[] = [],
+): Promise<Stage> {
   const fields: Record<string, unknown> = { ...patch, updatedAt: new Date().toISOString() };
   const names: Record<string, string> = {};
   const values: Record<string, unknown> = {};
@@ -63,12 +73,17 @@ export async function updateStage(id: string, patch: UpdateStageInput): Promise<
     values[`:v${i}`] = value;
     return `#f${i} = :v${i}`;
   });
+  const removes = remove.map((key, i) => {
+    names[`#r${i}`] = key;
+    return `#r${i}`;
+  });
 
   const res = await ddb.send(
     new UpdateCommand({
       TableName: tableName(),
       Key: { PK: `STAGE#${id}`, SK: 'META' },
-      UpdateExpression: `SET ${sets.join(', ')}`,
+      UpdateExpression:
+        `SET ${sets.join(', ')}` + (removes.length > 0 ? ` REMOVE ${removes.join(', ')}` : ''),
       ExpressionAttributeNames: names,
       ExpressionAttributeValues: values,
       ConditionExpression: 'attribute_exists(PK)',

@@ -74,7 +74,12 @@ export async function createTimeline(ownerId: string, input: CreateTimelineInput
   return timeline;
 }
 
-export async function updateTimeline(id: string, patch: UpdateTimelineInput): Promise<Timeline> {
+/** `remove` deletes attributes outright — see the note on `updateStage`. */
+export async function updateTimeline(
+  id: string,
+  patch: UpdateTimelineInput,
+  remove: readonly string[] = [],
+): Promise<Timeline> {
   const fields: Record<string, unknown> = { ...patch, updatedAt: new Date().toISOString() };
   const names: Record<string, string> = {};
   const values: Record<string, unknown> = {};
@@ -83,12 +88,17 @@ export async function updateTimeline(id: string, patch: UpdateTimelineInput): Pr
     values[`:v${i}`] = value;
     return `#f${i} = :v${i}`;
   });
+  const removes = remove.map((key, i) => {
+    names[`#r${i}`] = key;
+    return `#r${i}`;
+  });
 
   const res = await ddb.send(
     new UpdateCommand({
       TableName: tableName(),
       Key: { PK: `TIMELINE#${id}`, SK: 'META' },
-      UpdateExpression: `SET ${sets.join(', ')}`,
+      UpdateExpression:
+        `SET ${sets.join(', ')}` + (removes.length > 0 ? ` REMOVE ${removes.join(', ')}` : ''),
       ExpressionAttributeNames: names,
       ExpressionAttributeValues: values,
       ConditionExpression: 'attribute_exists(PK)',

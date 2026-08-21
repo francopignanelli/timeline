@@ -38,13 +38,20 @@ export async function updateOwnTimeline(
   patch: UpdateTimelineInput,
 ): Promise<Timeline> {
   const existing = await access.requireTimeline(userId, id, 'EDIT');
+
+  // Same rule (and same reasoning) as `updateOwnStage`: an ongoing timeline
+  // must not keep a stale end date, and the removal has to be derived here
+  // because a JSON body cannot express "clear this field".
+  const ongoing = patch.ongoing ?? existing.ongoing;
+  const removals = ongoing ? ['end'] : [];
+
   // Cross-field range rules only see both sides once merged (DATA_MODEL.md).
   createTimelineSchema.parse({
     title: patch.title ?? existing.title,
     description: patch.description ?? existing.description,
     start: patch.start ?? existing.start,
-    end: 'end' in patch ? patch.end : existing.end,
-    ongoing: patch.ongoing ?? existing.ongoing,
+    end: ongoing ? undefined : 'end' in patch ? patch.end : existing.end,
+    ongoing,
     unit: patch.unit ?? existing.unit,
     rulerVisible: patch.rulerVisible ?? existing.rulerVisible,
     visibility: patch.visibility ?? existing.visibility,
@@ -52,7 +59,8 @@ export async function updateOwnTimeline(
   // Visibility is not settable through a general PATCH — it flows through the
   // dedicated share endpoints so the token lifecycle stays in one place.
   const { visibility: _ignored, ...safePatch } = patch;
-  return repo.updateTimeline(id, safePatch);
+  const { end: _dropped, ...safePatchWithoutEnd } = safePatch;
+  return repo.updateTimeline(id, ongoing ? safePatchWithoutEnd : safePatch, removals);
 }
 
 /** Deleting a timeline is an owner-only act, not an editor one. */

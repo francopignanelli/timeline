@@ -23,6 +23,27 @@ const SIZE_CLASSES: Record<NonNullable<DialogProps['size']>, string> = {
 export function Dialog({ open, onClose, title, children, size = 'md' }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
+  /*
+   * A modal must be modal: nothing behind it may react to a pointer. The
+   * dialog sits in the top layer visually, but it stays where it is in the
+   * DOM, so its events still bubble to whatever contains it — and some
+   * dialogs (Add Milestone/Add Stage) are rendered *inside* the timeline
+   * canvas. The canvas's own pointerdown handler was therefore firing for
+   * clicks inside the dialog and calling setPointerCapture() on itself,
+   * which caused two separate reported bugs at once:
+   *
+   *   - the canvas panned behind the open modal while you dragged to select
+   *     text inside it, and
+   *   - checkboxes in the dialog stopped working entirely: with the pointer
+   *     captured by an ancestor, `pointerup` retargets away from the input,
+   *     so the browser never synthesises the `click` that toggles it. That
+   *     is why the Stage "Ongoing" control appeared dead.
+   *
+   * Cutting propagation here fixes it once for every dialog rather than per
+   * handler at each would-be listener.
+   */
+  const stopPointer = (e: React.PointerEvent) => e.stopPropagation();
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -34,6 +55,9 @@ export function Dialog({ open, onClose, title, children, size = 'md' }: DialogPr
     <dialog
       ref={ref}
       onClose={onClose}
+      onPointerDown={stopPointer}
+      onPointerMove={stopPointer}
+      onPointerUp={stopPointer}
       onMouseDown={(e) => {
         // `e.target === ref.current` alone isn't "clicked the backdrop" — a
         // native <dialog>'s scrollbar isn't a separate element, so clicking
@@ -55,7 +79,10 @@ export function Dialog({ open, onClose, title, children, size = 'md' }: DialogPr
       // Desktop: centered card that scrolls internally rather than growing past
       // the viewport (milestone editors can carry several blocks). Mobile:
       // full-screen sheet, per UI_SPEC.md.
-      className={`m-auto max-h-[85vh] w-full overflow-y-auto rounded-xl border border-border bg-surface-elevated p-6 text-text backdrop:bg-dark/40 backdrop:backdrop-blur-sm max-sm:h-full max-sm:max-h-full max-sm:max-w-full max-sm:rounded-none max-sm:border-0 ${SIZE_CLASSES[size]}`}
+      // `select-text` is deliberate: the timeline canvas sets `select-none` on
+      // itself, and the Add dialogs render inside it, so without this the
+      // inherited rule makes labels and copy inside those modals unselectable.
+      className={`m-auto max-h-[85vh] w-full select-text overflow-y-auto rounded-xl border border-border bg-surface-elevated p-6 text-text backdrop:bg-dark/40 backdrop:backdrop-blur-sm max-sm:h-full max-sm:max-h-full max-sm:max-w-full max-sm:rounded-none max-sm:border-0 ${SIZE_CLASSES[size]}`}
     >
       {open && (
         <>

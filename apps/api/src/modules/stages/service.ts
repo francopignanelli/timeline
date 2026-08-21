@@ -38,16 +38,32 @@ export async function updateOwnStage(
   patch: UpdateStageInput,
 ): Promise<Stage> {
   const existing = await access.requireStage(userId, id, 'EDIT');
+
+  /*
+   * Turning "ongoing" on has to drop any end date the stage already had.
+   * The client can't say so in the body — it sends `end: undefined`, which
+   * JSON.stringify strips, leaving "clear it" and "don't touch it"
+   * indistinguishable on the wire — so the intent is derived here instead.
+   * Without this the merged entity is `ongoing: true` *and* `end: <old>`,
+   * which checkTemporalRange rejects: the save failed every time, and the
+   * UI could only report a generic error (reported as the Stage "Ongoing"
+   * toggle refusing to stick).
+   */
+  const ongoing = patch.ongoing ?? existing.ongoing;
+  const { end: _dropped, ...patchWithoutEnd } = patch;
+  const writePatch = ongoing ? patchWithoutEnd : patch;
+  const removals = ongoing ? ['end'] : [];
+
   // Cross-field range rules only see both sides once merged (DATA_MODEL.md).
   createStageSchema.parse({
     title: patch.title ?? existing.title,
     description: patch.description ?? existing.description,
     start: patch.start ?? existing.start,
-    end: 'end' in patch ? patch.end : existing.end,
-    ongoing: patch.ongoing ?? existing.ongoing,
+    end: ongoing ? undefined : 'end' in patch ? patch.end : existing.end,
+    ongoing,
     blocks: patch.blocks ?? existing.blocks,
   });
-  const updated = await repo.updateStage(id, patch);
+  const updated = await repo.updateStage(id, writePatch, removals);
 
   // Same rule as milestones: a block the user removed leaves its upload
   // behind unless something explicitly deletes it.

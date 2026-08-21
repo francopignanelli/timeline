@@ -76,7 +76,9 @@ describe('timelines service', () => {
     accessMocks.requireTimeline.mockResolvedValue(timeline);
     repoMocks.updateTimeline.mockResolvedValue(timeline);
     await updateOwnTimeline(OWNER, 't1', { title: 'Renamed', visibility: 'PUBLIC' });
-    expect(repoMocks.updateTimeline).toHaveBeenCalledWith('t1', { title: 'Renamed' });
+    // The fixture is ongoing, so `end` is also removed — harmless and
+    // idempotent when the attribute isn't there to begin with.
+    expect(repoMocks.updateTimeline).toHaveBeenCalledWith('t1', { title: 'Renamed' }, ['end']);
   });
 
   it('lists owned and shared timelines together, without duplicates', async () => {
@@ -92,5 +94,38 @@ describe('timelines service', () => {
     const result = await listAccessibleTimelines(OWNER);
     expect(result.map((t) => t.id).sort()).toEqual(['t1', 't2']);
     expect(repoMocks.batchGetTimelines).toHaveBeenCalledWith(['t2']);
+  });
+});
+
+describe('updateOwnTimeline — ongoing clears the end date', () => {
+  const ended: Timeline = {
+    ...timeline,
+    ongoing: false,
+    end: { date: '31/12/2023', precision: 'DAY' },
+  };
+
+  it('removes a stale end date when the timeline is switched to ongoing', async () => {
+    accessMocks.requireTimeline.mockResolvedValue(ended);
+    repoMocks.updateTimeline.mockResolvedValue({ ...ended, ongoing: true, end: undefined });
+
+    await updateOwnTimeline(OWNER, 't1', { ongoing: true });
+
+    const [, writePatch, removals] = repoMocks.updateTimeline.mock.calls[0]!;
+    expect(removals).toEqual(['end']);
+    expect(writePatch).not.toHaveProperty('end');
+  });
+
+  it('keeps the end date when the timeline is not ongoing', async () => {
+    accessMocks.requireTimeline.mockResolvedValue({ ...ended, ongoing: true, end: undefined });
+    repoMocks.updateTimeline.mockResolvedValue(ended);
+
+    await updateOwnTimeline(OWNER, 't1', {
+      ongoing: false,
+      end: { date: '31/12/2023', precision: 'DAY' },
+    });
+
+    const [, writePatch, removals] = repoMocks.updateTimeline.mock.calls[0]!;
+    expect(removals).toEqual([]);
+    expect(writePatch).toMatchObject({ end: { date: '31/12/2023', precision: 'DAY' } });
   });
 });
