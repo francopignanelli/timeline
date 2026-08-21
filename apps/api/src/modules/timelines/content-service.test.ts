@@ -20,7 +20,10 @@ const linksRepoMocks = vi.hoisted(() => ({
 }));
 vi.mock('../../repositories/links-repo', () => linksRepoMocks);
 
-const { linkMilestoneToTimeline } = await import('./content-service');
+const timelinesServiceMocks = vi.hoisted(() => ({ updateOwnTimeline: vi.fn() }));
+vi.mock('./service', () => timelinesServiceMocks);
+
+const { linkMilestoneToTimeline, linkStageToTimeline } = await import('./content-service');
 
 const OWNER = 'owner-1';
 
@@ -91,5 +94,90 @@ describe('linking a milestone the caller owns their timeline', () => {
     );
     expect(milestonesServiceMocks.getOwnMilestone).not.toHaveBeenCalled();
     expect(linksRepoMocks.linkMilestone).not.toHaveBeenCalled();
+  });
+
+  it('widens the timeline start when the linked milestone is dated earlier', async () => {
+    accessMocks.requireTimeline.mockResolvedValue(timeline); // start: 01/01/2020, ongoing
+    const early: Milestone = {
+      id: 'm1',
+      ownerId: OWNER,
+      title: 'Before the timeline even started',
+      date: { date: '01/01/2015', precision: 'YEAR' },
+      blocks: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    milestonesServiceMocks.getOwnMilestone.mockResolvedValue(early);
+    linksRepoMocks.listTimelineLinks.mockResolvedValue({ milestoneRefs: [], stageRefs: [] });
+    linksRepoMocks.linkMilestone.mockResolvedValue({
+      timelineId: 't1',
+      milestoneId: 'm1',
+      displayOrder: 0,
+      isHighlighted: false,
+      isHidden: false,
+      addedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    await linkMilestoneToTimeline(OWNER, 't1', { milestoneId: 'm1' });
+
+    expect(timelinesServiceMocks.updateOwnTimeline).toHaveBeenCalledWith(OWNER, 't1', {
+      start: { date: '01/01/2015', precision: 'YEAR' },
+    });
+  });
+
+  it('does not touch the timeline when the milestone already fits inside it', async () => {
+    accessMocks.requireTimeline.mockResolvedValue(timeline);
+    const inRange: Milestone = {
+      id: 'm1',
+      ownerId: OWNER,
+      title: 'Fits fine',
+      date: { date: '01/01/2021', precision: 'YEAR' },
+      blocks: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    milestonesServiceMocks.getOwnMilestone.mockResolvedValue(inRange);
+    linksRepoMocks.listTimelineLinks.mockResolvedValue({ milestoneRefs: [], stageRefs: [] });
+    linksRepoMocks.linkMilestone.mockResolvedValue({
+      timelineId: 't1',
+      milestoneId: 'm1',
+      displayOrder: 0,
+      isHighlighted: false,
+      isHidden: false,
+      addedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    await linkMilestoneToTimeline(OWNER, 't1', { milestoneId: 'm1' });
+
+    expect(timelinesServiceMocks.updateOwnTimeline).not.toHaveBeenCalled();
+  });
+
+  it('widens the timeline end when a linked stage runs later than it, but never touches an ongoing timeline’s end', async () => {
+    accessMocks.requireTimeline.mockResolvedValue(timeline); // ongoing: true
+    const stage = {
+      id: 's1',
+      ownerId: OWNER,
+      title: 'Runs past 2020',
+      start: { date: '01/01/2019', precision: 'YEAR' },
+      end: { date: '01/01/2099', precision: 'YEAR' },
+      ongoing: false,
+      blocks: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    stagesServiceMocks.getOwnStage.mockResolvedValue(stage);
+    linksRepoMocks.linkStage.mockResolvedValue({
+      timelineId: 't1',
+      stageId: 's1',
+      isHighlighted: false,
+      addedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    await linkStageToTimeline(OWNER, 't1', { stageId: 's1' });
+
+    // The timeline is ongoing, so only start (2019 < 2020) widens — end never does.
+    expect(timelinesServiceMocks.updateOwnTimeline).toHaveBeenCalledWith(OWNER, 't1', {
+      start: { date: '01/01/2019', precision: 'YEAR' },
+    });
   });
 });

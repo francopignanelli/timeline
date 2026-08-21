@@ -9,12 +9,14 @@ import { TimelineCanvas } from '../canvas/TimelineCanvas';
 import { MilestoneModal } from '../milestones/MilestoneModal';
 import { StagePopover } from '../stages/StagePopover';
 import { ShareDialog } from '../sharing/ShareDialog';
+import { EditTimelineDialog } from './EditTimelineDialog';
 import { useDeleteTimeline, useTimeline, useTimelineContent } from './hooks';
 
 export function TimelinePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [shareOpen, setShareOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const del = useDeleteTimeline();
   const { timelineId } = useParams<{ timelineId: string }>();
@@ -115,6 +117,13 @@ export function TimelinePage() {
             <div className="ml-auto flex items-center gap-4">
               <button
                 type="button"
+                onClick={() => setEditOpen(true)}
+                className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
+              >
+                {t('common.edit')}
+              </button>
+              <button
+                type="button"
                 onClick={() => setShareOpen(true)}
                 className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
               >
@@ -160,6 +169,9 @@ export function TimelinePage() {
         onClose={closeStage}
       />
       <ShareDialog timelineId={id} open={shareOpen} onClose={() => setShareOpen(false)} />
+      {timeline && (
+        <EditTimelineDialog timeline={timeline} open={editOpen} onClose={() => setEditOpen(false)} />
+      )}
 
       <Dialog
         open={confirmingDelete}

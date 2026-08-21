@@ -1,29 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Timeline } from '@timeline/shared';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { formatRangeCompact } from '../../lib/format-date';
+import { hasSeenTutorial, markTutorialSeen } from '../../lib/tutorial';
 import { useAuth } from '../auth/auth-provider';
+import { WelcomeTutorial } from '../onboarding/WelcomeTutorial';
 import { useTimelines } from './hooks';
 import { CreateTimelineDialog } from './CreateTimelineDialog';
+import { EditTimelineDialog } from './EditTimelineDialog';
 
-function TimelineRow({ timeline }: { timeline: Timeline }) {
+interface TimelineRowProps {
+  timeline: Timeline;
+  onEdit: (timeline: Timeline) => void;
+}
+
+function TimelineRow({ timeline, onEdit }: TimelineRowProps) {
   const { t } = useTranslation();
   return (
-    <li>
-      <Link
-        to={`/timeline/${timeline.id}`}
-        className="group flex items-baseline justify-between gap-4 border-b border-border py-5"
-      >
-        <span className="font-serif text-2xl text-text transition-colors group-hover:text-accent">
+    <li className="flex items-baseline justify-between gap-4 border-b border-border py-5">
+      {/*
+        Edit is a sibling of the Link, not nested inside it: an <a> with
+        interactive content inside isn't valid HTML, and this codebase has
+        already hit that exact class of bug once (a nested <form> silently
+        swallowing a button click) — not repeating it here.
+      */}
+      <Link to={`/timeline/${timeline.id}`} className="group min-w-0">
+        <span className="truncate font-serif text-2xl text-text transition-colors group-hover:text-accent">
           {timeline.title}
         </span>
-        <span className="shrink-0 font-mono text-sm text-text-muted">
+      </Link>
+      <span className="flex shrink-0 items-center gap-4">
+        <button
+          type="button"
+          onClick={() => onEdit(timeline)}
+          className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
+        >
+          {t('common.edit')}
+        </button>
+        <span className="font-mono text-sm text-text-muted">
           {formatRangeCompact(timeline.start, timeline.end, timeline.ongoing, t('common.present'))}
         </span>
-      </Link>
+      </span>
     </li>
   );
 }
@@ -33,6 +53,21 @@ export function DashboardPage() {
   const { user } = useAuth();
   const { data: timelines, isLoading, isError, refetch } = useTimelines();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingTimeline, setEditingTimeline] = useState<Timeline | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+
+  // Auto-opens once, the first time a signed-in user lands here — which is
+  // effectively "the first time entering the app", since the root route
+  // redirects straight to /dashboard. Checked once on mount, not tied to
+  // `timelines` loading, so it isn't delayed by (or repeated on) a refetch.
+  useEffect(() => {
+    if (!hasSeenTutorial()) setTutorialOpen(true);
+  }, []);
+
+  const closeTutorial = () => {
+    markTutorialSeen();
+    setTutorialOpen(false);
+  };
 
   // The API returns owned and shared timelines in one list (AP3 ∪ AP12);
   // ownerId is what distinguishes them, and it's already on every row here
@@ -42,7 +77,16 @@ export function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-12 md:py-16">
-      <h1 className="font-serif text-4xl text-text">{t('dashboard.title')}</h1>
+      <div className="flex items-baseline justify-between gap-4">
+        <h1 className="font-serif text-4xl text-text">{t('dashboard.title')}</h1>
+        <button
+          type="button"
+          onClick={() => setTutorialOpen(true)}
+          className="text-sm text-text-secondary underline-offset-4 hover:text-text hover:underline"
+        >
+          {t('tutorial.action')}
+        </button>
+      </div>
 
       {isLoading && (
         <div className="mt-14 flex flex-col" aria-label={t('common.loading')}>
@@ -80,7 +124,7 @@ export function DashboardPage() {
           {mine.length > 0 ? (
             <ul>
               {mine.map((timeline) => (
-                <TimelineRow key={timeline.id} timeline={timeline} />
+                <TimelineRow key={timeline.id} timeline={timeline} onEdit={setEditingTimeline} />
               ))}
             </ul>
           ) : (
@@ -99,7 +143,7 @@ export function DashboardPage() {
               </h2>
               <ul>
                 {shared.map((timeline) => (
-                  <TimelineRow key={timeline.id} timeline={timeline} />
+                  <TimelineRow key={timeline.id} timeline={timeline} onEdit={setEditingTimeline} />
                 ))}
               </ul>
             </>
@@ -108,6 +152,14 @@ export function DashboardPage() {
       )}
 
       <CreateTimelineDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      {editingTimeline && (
+        <EditTimelineDialog
+          timeline={editingTimeline}
+          open
+          onClose={() => setEditingTimeline(null)}
+        />
+      )}
+      <WelcomeTutorial open={tutorialOpen} onClose={closeTutorial} />
     </div>
   );
 }

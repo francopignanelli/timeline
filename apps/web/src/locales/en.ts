@@ -263,6 +263,7 @@ export const en = {
     },
   },
   timeline: {
+    edit: { title: 'Edit timeline', action: 'Edit timeline' },
     form: {
       dialogTitle: 'New Timeline',
       title: 'Title',
@@ -387,6 +388,31 @@ export const en = {
   legal: {
     termsLink: 'Terms and Conditions',
     backToApp: 'Back to app',
+  },
+  tutorial: {
+    action: 'Tutorial',
+    stepLabel: 'Step {{current}} of {{total}}',
+    back: 'Back',
+    next: 'Next',
+    skip: 'Skip',
+    finish: 'Finish',
+    steps: {
+      timeline: {
+        title: 'Timeline',
+        body: 'The overall chronological story you’re telling.',
+        example: '"My Concerts"',
+      },
+      milestone: {
+        title: 'Milestone',
+        body: 'A specific event at a single point in time.',
+        example: '"Coldplay — 14/11/2016"',
+      },
+      stage: {
+        title: 'Stage',
+        body: 'A longer period with a start date, and usually an end date.',
+        example: '"Software Developer at Company X — 2024–2026"',
+      },
+    },
   },
 } as const;
 

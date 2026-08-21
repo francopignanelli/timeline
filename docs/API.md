@@ -44,7 +44,7 @@
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/timelines/{timelineId}/milestones` | Link. Body: `{ milestoneId }` to link existing, **or** `{ milestone: {...} }` to create-and-link atomically. 409 if already linked. |
+| POST | `/timelines/{timelineId}/milestones` | Link. Body: `{ milestoneId }` to link existing, **or** `{ milestone: {...} }` to create-and-link atomically. 409 if already linked. If the milestone's date falls outside the timeline's current start/end, the timeline's own bounds widen automatically to include it (never shrinks an ongoing timeline's open end — DECISIONS #59). |
 | PATCH | `/timelines/{timelineId}/milestones/{milestoneId}` | Update presentation: displayOrder, isHighlighted, isHidden. |
 | DELETE | `/timelines/{timelineId}/milestones/{milestoneId}` | Unlink only — milestone untouched. |
 
@@ -60,7 +60,7 @@ Keys are minted server-side as `u/<userId>/<ulid><ext>`. Ownership is decidable 
 
 ### Stages & Timeline↔Stage links
 
-Identical shape to milestones: `/stages`, `/stages/{stageId}`, `/stages/{stageId}/timeline-count`, `/timelines/{timelineId}/stages`, `/timelines/{timelineId}/stages/{stageId}`. Stage body: title, description?, start, end?, ongoing, blocks? — Stages take the same content blocks as Milestones (DECISIONS #39). Link presentation: displayStyle?, isHighlighted.
+Identical shape to milestones: `/stages`, `/stages/{stageId}`, `/stages/{stageId}/timeline-count`, `/timelines/{timelineId}/stages`, `/timelines/{timelineId}/stages/{stageId}`. Stage body: title, description?, start, end?, ongoing, blocks? — Stages take the same content blocks as Milestones (DECISIONS #39). Link presentation: displayStyle?, isHighlighted. Same boundary auto-expansion as milestones on link, over the stage's whole span (an ongoing stage's open end only pulls the timeline's end up to *today*, never further — DECISIONS #59).
 
 ## Authorization rules (MVP)
 

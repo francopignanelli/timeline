@@ -271,6 +271,7 @@ export const es: TranslationShape = {
     },
   },
   timeline: {
+    edit: { title: 'Editar línea de tiempo', action: 'Editar línea de tiempo' },
     form: {
       dialogTitle: 'Nueva línea de tiempo',
       title: 'Título',
@@ -396,5 +397,30 @@ export const es: TranslationShape = {
   legal: {
     termsLink: 'Términos y Condiciones',
     backToApp: 'Volver a la app',
+  },
+  tutorial: {
+    action: 'Tutorial',
+    stepLabel: 'Paso {{current}} de {{total}}',
+    back: 'Atrás',
+    next: 'Siguiente',
+    skip: 'Omitir',
+    finish: 'Finalizar',
+    steps: {
+      timeline: {
+        title: 'Línea de tiempo',
+        body: 'La historia cronológica general que estás contando.',
+        example: '"Mis recitales"',
+      },
+      milestone: {
+        title: 'Hito',
+        body: 'Un evento específico en un solo punto en el tiempo.',
+        example: '"Coldplay — 14/11/2016"',
+      },
+      stage: {
+        title: 'Etapa',
+        body: 'Un período más largo con una fecha de inicio, y normalmente una de fin.',
+        example: '"Desarrollador de Software en Empresa X — 2024–2026"',
+      },
+    },
   },
 };

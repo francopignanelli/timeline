@@ -4,8 +4,15 @@ import type {
   LinkStageInput,
   UpdateMilestoneLinkInput,
   UpdateStageLinkInput,
+  UpdateTimelineInput,
 } from '@timeline/shared';
-import { createTimeline, deleteTimeline, getTimeline, listTimelines } from '../../lib/timelines-api';
+import {
+  createTimeline,
+  deleteTimeline,
+  getTimeline,
+  listTimelines,
+  updateTimeline,
+} from '../../lib/timelines-api';
 import { ApiError } from '../../lib/api-client';
 import { getMilestoneTimelineCount } from '../../lib/milestones-api';
 import {
@@ -56,6 +63,17 @@ export function useCreateTimeline() {
   return useMutation({
     mutationFn: createTimeline,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['timelines'] }),
+  });
+}
+
+export function useUpdateTimeline(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: UpdateTimelineInput) => updateTimeline(id, patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['timelines'] });
+      void queryClient.invalidateQueries({ queryKey: ['timelines', id] });
+    },
   });
 }
 

@@ -12,6 +12,8 @@ import * as linksRepo from '../../repositories/links-repo';
 import * as access from '../access/service';
 import * as milestonesService from '../milestones/service';
 import * as stagesService from '../stages/service';
+import * as timelinesService from './service';
+import { expandedBounds, stageEffectiveEnd } from './boundary-expansion';
 
 export interface TimelineContent {
   milestones: { ref: TimelineMilestoneRef; milestone: Milestone }[];
@@ -44,12 +46,18 @@ export async function linkMilestoneToTimeline(
   timelineId: string,
   input: LinkMilestoneInput,
 ): Promise<{ ref: TimelineMilestoneRef; milestone: Milestone }> {
-  await access.requireTimeline(ownerId, timelineId, 'EDIT');
+  const timeline = await access.requireTimeline(ownerId, timelineId, 'EDIT');
 
   const milestone =
     'milestone' in input
       ? await milestonesService.createMilestone(ownerId, input.milestone)
       : await milestonesService.getOwnMilestone(ownerId, input.milestoneId);
+
+  // A milestone dated outside the timeline's own range must not vanish off
+  // the canvas the instant it's attached — the canvas only ever renders
+  // between the timeline's start and today (product rule, see canvas-items.ts).
+  const patch = expandedBounds(timeline, milestone.date);
+  if (patch) await timelinesService.updateOwnTimeline(ownerId, timelineId, patch);
 
   const { milestoneRefs } = await linksRepo.listTimelineLinks(timelineId);
   const ref = await linksRepo.linkMilestone(timelineId, milestone.id, milestoneRefs.length);
@@ -61,12 +69,18 @@ export async function linkStageToTimeline(
   timelineId: string,
   input: LinkStageInput,
 ): Promise<{ ref: TimelineStageRef; stage: Stage }> {
-  await access.requireTimeline(ownerId, timelineId, 'EDIT');
+  const timeline = await access.requireTimeline(ownerId, timelineId, 'EDIT');
 
   const stage =
     'stage' in input
       ? await stagesService.createStage(ownerId, input.stage)
       : await stagesService.getOwnStage(ownerId, input.stageId);
+
+  // Same boundary-widening as a milestone, but over the stage's whole span
+  // rather than a single point — an ongoing stage's open end still only
+  // pulls the timeline's end up to today, never past it (stageEffectiveEnd).
+  const patch = expandedBounds(timeline, stage.start, stageEffectiveEnd(stage));
+  if (patch) await timelinesService.updateOwnTimeline(ownerId, timelineId, patch);
 
   const ref = await linksRepo.linkStage(timelineId, stage.id);
   return { ref, stage };
