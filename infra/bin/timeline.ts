@@ -24,7 +24,7 @@ const SETLIST_API_KEY_PARAM = '/timeline/dev/setlistfm-api-key';
 
 const corsOrigins = ['http://localhost:5173', 'https://timelinez.netlify.app'];
 
-const authStack = new AuthStack(app, 'TimelineDevAuth', { env });
+const authStack = new AuthStack(app, 'TimelineDevAuth', { env, corsOrigins });
 new ApiStack(app, 'TimelineDevApi', {
   env,
   userPool: authStack.userPool,

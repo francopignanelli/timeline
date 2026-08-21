@@ -26,3 +26,26 @@ The user currently uses AWS via the **web console only**. CDK deployments requir
 
 ### Cleanup path
 - `cdk destroy` removes the dev stack. DynamoDB data is user data once real content exists — destruction requires explicit user confirmation per CLAUDE.md.
+
+## Google Sign-In (Phase 8, in progress)
+
+**Status**: Cognito is ready to federate — a Hosted UI domain and OAuth support on the app client were deployed 2026-08-21 (DECISIONS #58). What's still needed is a Google OAuth client, which only the account owner can create.
+
+### 6. Google Cloud OAuth client (console, ~15 min, free)
+1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or reuse one) — any name.
+2. **APIs & Services → OAuth consent screen**: User type **External**. App name: `Timelines`. Support email: your own. Leave it in **Testing** mode for now (no Google review needed while it's just you and invited testers); scopes `email`, `profile`, `openid` are the non-sensitive defaults and need no extra justification.
+3. **APIs & Services → Credentials → Create Credentials → OAuth client ID**. Application type: **Web application**. Name: `Timelines (dev)`.
+   - **Authorized JavaScript origins**: `http://localhost:5173` and `https://timelinez.netlify.app`
+   - **Authorized redirect URIs**: exactly —
+     ```
+     https://timelines-dev-990863603580.auth.us-east-1.amazoncognito.com/oauth2/idpresponse
+     ```
+     (This is Cognito's own callback endpoint, not the app's — Cognito redirects on to the app's actual origin afterward, via the `callbackUrls` already configured on the User Pool Client.)
+4. Google shows a **Client ID** and **Client Secret**. Send me the Client ID (not secret) — and store the secret yourself, directly, so it never enters this chat's history:
+   ```
+   aws ssm put-parameter --name /timeline/dev/google-oauth-client-secret --type SecureString --value "<paste secret here>" --profile timeline-dev --region us-east-1
+   ```
+
+### 7. Wire up the identity provider (once the above is done)
+- Add a `UserPoolIdentityProviderGoogle` construct (client ID as a plain prop, secret pulled from SSM the same way `SETLIST_API_KEY_PARAM` is), add `GOOGLE` to the User Pool Client's `supportedIdentityProviders`, map Google's `email`/`given_name`/`family_name` to the pool's standard attributes.
+- Frontend: a "Sign in with Google" button (`signInWithRedirect({ provider: 'Google' })`), plus a first-login step for a federated user with no `custom:username` yet — auto-derived from their email's local part (slugified, de-duplicated), shown as an editable, one-time confirmation rather than locked in silently.
