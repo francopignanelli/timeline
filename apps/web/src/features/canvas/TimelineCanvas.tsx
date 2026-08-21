@@ -136,6 +136,13 @@ export function TimelineCanvas({
     const el = containerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      // The Add Milestone/Add Stage dialogs render inside this same
+      // container (same reason the keydown handler above guards against
+      // it). Without this, scrolling the dialog's own overflowing content —
+      // unavoidable on a shorter screen, where the form is taller than the
+      // viewport — bubbled up here and got hijacked into a canvas pan, with
+      // preventDefault() blocking the dialog from ever actually scrolling.
+      if ((e.target as HTMLElement).closest('dialog')) return;
       e.preventDefault();
       setScale((s) => {
         if (!s) return s;

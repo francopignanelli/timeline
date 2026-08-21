@@ -1,7 +1,7 @@
 # Timelines — Status
 
 **Last updated**: 2026-08-21
-**App version**: 2.0 (DECISIONS #44 — bump the second number for a small change, the first for a bigger one; shown next to the logo everywhere it renders). Bumped from 1.0 on 2026-08-21: the version was introduced this same session and then not actually bumped despite the session's own batch of changes (upload cleanup, dark mode, Timeline→Timelines rename, Terms page, delete confirmation, canvas rework) — corrected once noticed. Went straight to 2.0, not 1.1, since that batch reads as a bigger change under the project's own scheme, not a small one.
+**App version**: 2.1 (DECISIONS #44 — bump the second number for a small change, the first for a bigger one; shown next to the logo everywhere it renders). History: 1.0 → 2.0 on 2026-08-21 (a large batch: upload cleanup, dark mode, Timeline→Timelines rename, Terms page, delete confirmation, canvas rework). 2.0 → 2.1 the same day: fixed the canvas's wheel handler swallowing scroll events inside the Add Milestone/Stage dialogs on short viewports (small fix, not a new feature).
 
 ## Current phase
 **Phase 8 (sharing, collaboration, mentions) complete** — built beyond the original 7-phase MVP at user request. Design review and full detail: **`docs/SHARING_PLAN.md`**; decisions in DECISIONS #35–37.
